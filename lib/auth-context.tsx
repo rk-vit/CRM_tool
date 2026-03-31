@@ -1,11 +1,11 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
-import type { User, UserRole } from "./types"
-import { currentUser, adminUser } from "./mock-data"
+import { createContext, useContext, type ReactNode } from "react"
+import { useSession, signIn, signOut } from "next-auth/react"
+import type { UserRole } from "./types"
 
 interface AuthContextType {
-  user: User | null
+  user: any | null
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
@@ -15,37 +15,32 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const { data: session, status, update } = useSession()
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulated authentication
-    if (email.includes("admin")) {
-      setUser(adminUser)
-      return true
-    } else if (email && password) {
-      setUser(currentUser)
-      return true
-    }
-    return false
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    })
+    return !!res?.ok
   }
 
   const logout = () => {
-    setUser(null)
+    signOut({ callbackUrl: "/" })
   }
 
-  const switchRole = (role: UserRole) => {
-    if (role === "admin") {
-      setUser(adminUser)
-    } else {
-      setUser(currentUser)
-    }
+  const switchRole = async (role: UserRole) => {
+    // This is a dummy switchRole for the demo
+    // In a real app, you might update the user role in the DB and then refresh the session
+    console.log("Switching to role:", role)
   }
 
   return (
     <AuthContext.Provider
       value={{
-        user,
-        isAuthenticated: !!user,
+        user: session?.user ?? null,
+        isAuthenticated: status === "authenticated",
         login,
         logout,
         switchRole
