@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Header } from "@/components/crm/header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -56,9 +57,20 @@ const statusFilters: { value: LeadStatus | "all"; label: string; count: number }
 ]
 
 export default function LeadsPage() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const statusParam = searchParams.get("status") as LeadStatus | "all" | null
+  
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all")
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">(statusParam || "all")
+
+  useEffect(() => {
+    if (statusParam) {
+      setStatusFilter(statusParam)
+    }
+  }, [statusParam])
   const [projectFilter, setProjectFilter] = useState<string>("all")
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [currentPage, setCurrentPage] = useState(1)
@@ -124,7 +136,19 @@ export default function LeadsPage() {
 
       <div className="flex-1 p-4 md:p-6 space-y-4">
         {/* Status Tabs */}
-        <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as LeadStatus | "all")}>
+        <Tabs 
+          value={statusFilter} 
+          onValueChange={(v) => {
+            setStatusFilter(v as LeadStatus | "all")
+            const params = new URLSearchParams(searchParams.toString())
+            if (v === "all") {
+              params.delete("status")
+            } else {
+              params.set("status", v)
+            }
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+          }}
+        >
           <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-secondary">
             {statusFilters.map((filter) => (
               <TabsTrigger
