@@ -50,9 +50,9 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
     const demoEmail =
-      role === "admin" ? "priya@realestate.com" : "rajesh@realestate.com";
+      role === "admin" ? "admin1@gmail.com" : "user1@gmail.com";
     const demoPassword = 
-      role === "admin" ? "adminpassword" : "password123";
+      role === "admin" ? "admin@123" : "user1@123";
     
     try {
       const res = await signIn("credentials", {

@@ -1,8 +1,10 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { adminUser, currentUser, salesExecutives } from "./mock-data";
+import bcrypt from "bcryptjs";
+import { sql } from "./db";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
@@ -15,21 +17,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           password: string;
         };
 
-        // --- DUMMY CHECK (matches your existing mock-data) ---
-        if (email === adminUser.email && password === adminUser.password)
-          return adminUser;
-        
-        const salesUser = salesExecutives.find((u) => u.email === email);
-        if (salesUser && password === salesUser.password) return salesUser;
+        if (!email || !password) return null;
 
-        // --- REAL DB CHECK (NileDB — uncomment when ready) ---
-        // const sql = neon(process.env.NILEDB_URL!)
-        // const [user] = await sql`
-        //   SELECT id, email, name, role FROM users
-        //   WHERE email = ${email}
-        //   AND password_hash = crypt(${password}, password_hash)
-        // `
-        // if (user) return user
+        try {
+          // Fetch user from real DB
+          const users = await sql`
+            SELECT id, email, name, role, phone, avatar, password_hash, created_at 
+            FROM users 
+            WHERE email = ${email}
+            LIMIT 1
+          `;
+          
+          const user = users[0];
+
+          if (user && await bcrypt.compare(password, user.password_hash)) {
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              role: user.role,
+              phone: user.phone,
+              avatar: user.avatar,
+              createdAt: user.created_at
+            };
+          }
+        } catch (error) {
+          console.error("Database auth error:", error);
+        }
 
         return null;
       },
