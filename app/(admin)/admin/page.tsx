@@ -52,11 +52,13 @@ export default function AdminDashboard() {
             icon={Users}
             variant="primary"
             trend={{ value: 8, isPositive: true }}
+            onClick={() => window.location.href = `/admin/leads`}
           />
           <StatsCard
             title="New Today"
             value={dashboardStats.todayLeads}
             icon={UserPlus}
+            onClick={() => window.location.href = `/leads`}
           />
           <StatsCard
             title="Pending Follow-ups"
