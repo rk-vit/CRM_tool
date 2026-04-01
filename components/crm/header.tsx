@@ -21,7 +21,7 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
-  const { user, switchRole } = useAuth()
+  const { user, logout } = useAuth()
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-card px-4 md:px-6">
@@ -48,26 +48,6 @@ export function Header({ title, subtitle }: HeaderProps) {
           </Badge>
         </Button>
 
-        {/* Role Switcher (for demo) */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="hidden md:flex gap-2">
-              <span className="capitalize">{user?.role}</span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Switch Role (Demo)</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => switchRole("sales")}>
-              Sales Executive
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => switchRole("admin")}>
-              Admin
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -90,7 +70,7 @@ export function Header({ title, subtitle }: HeaderProps) {
             <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Logout</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={logout}>Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
