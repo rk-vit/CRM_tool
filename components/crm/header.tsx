@@ -36,6 +36,7 @@ interface Notification {
 //     // This is where you update your state in real-time
 //     setNotifications(prev => [data, ...prev]);
 //   });
+//dumy code for  push noitification
 // }, []);
 
 export function Header({ title, subtitle }: HeaderProps) {
