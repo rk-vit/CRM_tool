@@ -147,7 +147,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                   <Zap className="h-4 w-4 mr-2" /> Quick Action
                 </Button>
               </SheetTrigger>
-              <SheetContent className="w-full sm:max-w-md">
+              <SheetContent className="sm:max-w-xl p-6 overflow-y-auto">
                 <SheetHeader>
                   <SheetTitle>Quick Action</SheetTitle>
                 </SheetHeader>
