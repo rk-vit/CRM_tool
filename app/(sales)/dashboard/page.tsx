@@ -1,11 +1,11 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Header } from "@/components/crm/header"
 import { StatsCard } from "@/components/crm/stats-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { dashboardStats, leads, timelineEvents } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
 import {
   Users,
@@ -17,26 +17,67 @@ import {
   CheckCircle2,
   Phone,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
+import type { Lead, TimelineEvent, DashboardStats } from "@/lib/types"
 
 export default function SalesDashboard() {
   const { user } = useAuth()
-  const myLeads = leads.filter(l => l.assignedTo === user?.id)
-  const recentTimeline = timelineEvents.slice(0, 5)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [myLeads, setMyLeads] = useState<Lead[]>([])
+  const [recentTimeline, setRecentTimeline] = useState<TimelineEvent[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!user?.id) return
+      
+      try {
+        setLoading(true)
+        const [statsRes, leadsRes, timelineRes] = await Promise.all([
+          fetch(`/api/dashboard/stats?assignedTo=${user.id}`),
+          fetch(`/api/leads?assignedTo=${user.id}&limit=5`),
+          fetch(`/api/timeline?limit=5`)
+        ])
+        
+        const statsData = await statsRes.json()
+        const leadsData = await leadsRes.json()
+        const timelineData = await timelineRes.json()
+        
+        setStats(statsData)
+        setMyLeads(Array.isArray(leadsData) ? leadsData : [])
+        setRecentTimeline(Array.isArray(timelineData) ? timelineData : [])
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [user?.id])
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       new: "bg-chart-1 text-white",
       contacted: "bg-chart-2 text-white",
-      qualified: "bg-success text-success-foreground",
-      negotiation: "bg-warning text-warning-foreground",
-      won: "bg-chart-2 text-white",
+      qualified: "bg-green-600 text-white",
+      negotiation: "bg-orange-500 text-white",
+      won: "bg-emerald-600 text-white",
       lost: "bg-destructive text-destructive-foreground"
     }
     return colors[status] || "bg-secondary text-secondary-foreground"
+  }
+
+  if (loading && !stats) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -48,26 +89,25 @@ export default function SalesDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatsCard
             title="New Leads"
-            value={dashboardStats.newLeads}
+            value={stats?.newLeads || 0}
             icon={UserPlus}
             variant="primary"
-            trend={{ value: 12, isPositive: true }}
           />
           <StatsCard
             title="Today Follow-up"
-            value={dashboardStats.todayFollowUp}
+            value={stats?.todayFollowUp || 0}
             icon={Calendar}
             variant="warning"
           />
           <StatsCard
             title="Missed Follow-up"
-            value={dashboardStats.missedFollowUp}
+            value={stats?.missedFollowUp || 0}
             icon={AlertCircle}
             variant="destructive"
           />
           <StatsCard
             title="Booked"
-            value={dashboardStats.booked}
+            value={stats?.booked || 0}
             icon={CheckCircle2}
             variant="success"
           />
@@ -77,27 +117,27 @@ export default function SalesDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <StatsCard
             title="Re-Engaged"
-            value={dashboardStats.reEngaged}
+            value={stats?.reEngaged || 0}
             icon={TrendingUp}
           />
           <StatsCard
             title="Today Leads"
-            value={dashboardStats.todayLeads}
+            value={stats?.todayLeads || 0}
             icon={Users}
           />
           <StatsCard
             title="Site Visits"
-            value={dashboardStats.siteVisitCompleted}
+            value={stats?.siteVisitCompleted || 0}
             icon={Building}
           />
           <StatsCard
             title="All Leads"
-            value={dashboardStats.allLeads}
+            value={stats?.allLeads || 0}
             icon={Users}
           />
           <StatsCard
             title="Total Calls"
-            value={234}
+            value={0}
             icon={Phone}
           />
         </div>
@@ -133,6 +173,9 @@ export default function SalesDashboard() {
                   </Badge>
                 </Link>
               ))}
+              {myLeads.length === 0 && (
+                <p className="text-center py-4 text-sm text-muted-foreground">No recent leads found.</p>
+              )}
             </CardContent>
           </Card>
 
@@ -148,9 +191,9 @@ export default function SalesDashboard() {
                   <div key={event.id} className="flex gap-3">
                     <div className="relative flex flex-col items-center">
                       <div className={`h-2 w-2 rounded-full ${
-                        event.type === "call" ? "bg-success" :
-                        event.type === "email" ? "bg-chart-1" :
-                        event.type === "status_change" ? "bg-warning" :
+                        event.type === "call" ? "bg-green-500" :
+                        event.type === "email" ? "bg-blue-500" :
+                        event.type === "status_change" ? "bg-orange-500" :
                         "bg-muted-foreground"
                       }`} />
                       {index < recentTimeline.length - 1 && (
@@ -168,6 +211,9 @@ export default function SalesDashboard() {
                     </div>
                   </div>
                 ))}
+                {recentTimeline.length === 0 && (
+                  <p className="text-center py-4 text-sm text-muted-foreground">No recent activity found.</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -192,11 +238,16 @@ export default function SalesDashboard() {
                     <p className="font-medium text-sm truncate">{lead.name}</p>
                     <p className="text-xs text-muted-foreground">{lead.phone}</p>
                   </div>
-                  <Button size="sm" variant="outline">
-                    <Phone className="h-4 w-4" />
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`tel:${lead.phone}`}>
+                      <Phone className="h-4 w-4" />
+                    </Link>
                   </Button>
                 </div>
               ))}
+              {myLeads.filter(l => l.followUpDate).length === 0 && (
+                <p className="col-span-full text-center py-4 text-sm text-muted-foreground">No follow-ups scheduled for today.</p>
+              )}
             </div>
           </CardContent>
         </Card>
