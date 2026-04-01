@@ -20,6 +20,20 @@ interface HeaderProps {
   subtitle?: string
 }
 
+interface Notification {
+  id: string
+  title: string
+  time: string
+  unread?: boolean
+}
+// useEffect(() => {
+//   const channel = pusher.subscribe('leads');
+//   channel.bind('new-lead', (data) => {
+//     // This is where you update your state in real-time
+//     setNotifications(prev => [data, ...prev]);
+//   });
+// }, []);
+
 export function Header({ title, subtitle }: HeaderProps) {
   const { user, logout } = useAuth()
 
