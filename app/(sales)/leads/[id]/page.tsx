@@ -5,7 +5,8 @@ import { Header } from "@/components/crm/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   Phone,
   Mail,
@@ -21,14 +22,27 @@ import {
   ChevronLeft,
   Loader2,
   ExternalLink,
-  Plus
+  ArrowLeft, 
+  Plus,
+  Zap
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
-import type { Lead, TimelineEvent, CallLog, EmailLog, Comment } from "@/lib/types"
+import type { Lead, TimelineEvent, CallLog, EmailLog, Comment, LeadStatus, LeadSubStatus } from "@/lib/types"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { leads } from "@/lib/mock-data"
 
 export default function LeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const [quickActionOpen, setQuickActionOpen] = useState(false)
   const [data, setData] = useState<{
     lead: Lead;
     timeline: TimelineEvent[];
@@ -382,6 +396,76 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
       </div>
     </div>
   )
+  function QuickActionForm({ lead, onClose }: { lead: typeof leads[0], onClose: () => void }) {
+  const [status, setStatus] = useState<LeadStatus>(lead.status)
+  const [subStatus, setSubStatus] = useState<LeadSubStatus>(lead.subStatus)
+  const [comment, setComment] = useState("")
+  const [followUpDate, setFollowUpDate] = useState("")
+
+  return (
+    <div className="space-y-4 mt-6">
+      <div className="p-3 rounded-lg bg-secondary/50">
+        <p className="text-sm text-muted-foreground">Lead ID</p>
+        <p className="font-medium">{lead.id}</p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Comment</label>
+        <Textarea 
+          placeholder="Add a comment about this interaction..."
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Lead Status</label>
+          <Select value={status} onValueChange={(v) => setStatus(v as LeadStatus)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="new">New</SelectItem>
+              <SelectItem value="contacted">Contacted</SelectItem>
+              <SelectItem value="qualified">Qualified</SelectItem>
+              <SelectItem value="negotiation">Negotiation</SelectItem>
+              <SelectItem value="won">Won</SelectItem>
+              <SelectItem value="lost">Lost</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Sub Status</label>
+          <Select value={subStatus} onValueChange={(v) => setSubStatus(v as LeadSubStatus)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hot">Hot</SelectItem>
+              <SelectItem value="warm">Warm</SelectItem>
+              <SelectItem value="cold">Cold</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Follow-up Date</label>
+        <Input 
+          type="datetime-local"
+          value={followUpDate}
+          onChange={(e) => setFollowUpDate(e.target.value)}
+        />
+      </div>
+
+      <div className="flex gap-2 pt-4">
+        <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+        <Button onClick={onClose} className="flex-1">Save</Button>
+      </div>
+    </div>
+  )
+}
 }
 
 function Building(props: any) {

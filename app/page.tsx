@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Building2, Eye, EyeOff, ShieldCheck, Mail, Lock } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-
+import { useToast } from "@/hooks/use-toast"
+import { toast } from "@/hooks/use-toast"
 export default function LoginPage() {
+
+  const { toast } = useToast()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -32,13 +35,16 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
     try {
       const res = await login(email, password);
 
       if (!res) {
-        setError("Invalid email or password. Please try again.");
-        setIsLoading(false);
+        toast({
+          title: "Login Failed",
+          description: "Invalid email or password",
+          variant: "destructive",
+        })
+        setIsLoading(false)
       }
       // Redirection is handled by the useEffect
     } catch (err) {
