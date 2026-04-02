@@ -96,11 +96,14 @@ export default function AdminDashboard() {
             value={stats?.allLeads || 0}
             icon={Users}
             variant="primary"
+            trend={{ value: 8, isPositive: true }}
+            onClick={() => window.location.href = `/admin/leads`}
           />
           <StatsCard
             title="New This Month"
             value={stats?.newLeads || 0}
             icon={UserPlus}
+            onClick={() => window.location.href = `/leads`}
           />
           <StatsCard
             title="Conversions"

@@ -93,42 +93,39 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="border-b bg-card">
-        <div className="p-4 md:p-6">
-          <Link
-            href="/leads"
-            className="flex items-center text-sm text-muted-foreground hover:text-primary mb-4 transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Back to Leads
-          </Link>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <div className="h-12 w-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold">
-                {lead.name.split(" ").map(n => n[0]).join("")}
-              </div>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold">{lead.name}</h1>
-                  <Badge variant="outline" className="font-mono">{lead.id}</Badge>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Building className="h-3.5 w-3.5" /> {lead.project}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" /> Added {format(new Date(lead.createdAt), "MMM dd, yyyy")}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge className={`${getStatusColor(lead.status)} px-3 py-1 text-sm`}>
-                {lead.status.toUpperCase()}
-              </Badge>
-              <Button size="icon" variant="outline">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </div>
+      <Header 
+        title={`Lead Details`} 
+        subtitle={`${lead.id} - ${lead.name}`}
+      />
+
+      <div className="flex-1 p-4 md:p-6 space-y-4">
+        {/* Back Button & Actions */}
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" asChild>
+            <Link href="/leads">
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Leads
+            </Link>
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm">
+              <Phone className="h-4 w-4 mr-2" /> Call
+            </Button>
+            <Button variant="outline" size="sm" className="hidden sm:flex">
+              <Mail className="h-4 w-4 mr-2" /> Email
+            </Button>
+            <Sheet open={quickActionOpen} onOpenChange={setQuickActionOpen}>
+              <SheetTrigger asChild>
+                <Button size="sm">
+                  <Zap className="h-4 w-4 mr-2" /> Quick Action
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="sm:max-w-xl p-6 overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Quick Action</SheetTitle>
+                </SheetHeader>
+                <QuickActionForm lead={lead} onClose={() => setQuickActionOpen(false)} />
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>

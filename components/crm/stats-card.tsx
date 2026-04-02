@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import type { LucideIcon } from "lucide-react"
+import { useRouter, usePathname } from "next/navigation"
 
 interface StatsCardProps {
   title: string
@@ -17,6 +18,9 @@ interface StatsCardProps {
 }
 
 export function StatsCard({ title, value, icon: Icon, trend, variant = "default", onClick }: StatsCardProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+
   const variants = {
     default: "bg-card hover:bg-accent/50",
     primary: "bg-primary text-primary-foreground hover:bg-primary/90",
@@ -33,14 +37,37 @@ export function StatsCard({ title, value, icon: Icon, trend, variant = "default"
     destructive: "bg-destructive-foreground/20 text-destructive-foreground"
   }
 
+  const getAutoRoute = () => {
+    const titleLower = title.toLowerCase()
+    const basePath = pathname.startsWith("/admin") ? "/admin" : ""
+
+    if (titleLower.includes("total leads") || titleLower.includes("all leads")) return `${basePath}/leads`
+    if (titleLower.includes("new") || titleLower.includes("today leads")) return `${basePath}/leads?status=new`
+    if (titleLower.includes("follow-up")) return `${basePath}/leads?status=follow_up`
+    if (titleLower.includes("conversion") || titleLower.includes("booked")) return `${basePath}/leads?status=won`
+    if (titleLower.includes("calls")) return `${basePath}/calls`
+    return null
+  }
+
+  const autoRoute = getAutoRoute()
+  const isClickable = !!onClick || !!autoRoute
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick()
+    } else if (autoRoute) {
+      router.push(autoRoute)
+    }
+  }
+
   return (
     <Card 
       className={cn(
-        "cursor-pointer transition-all duration-200 border-0 shadow-sm",
+        "transition-all duration-200 border-0 shadow-sm",
         variants[variant],
-        onClick && "hover:shadow-md"
+        isClickable ? "cursor-pointer hover:shadow-md" : ""
       )}
-      onClick={onClick}
+      onClick={isClickable ? handleClick : undefined}
     >
       <CardContent className="p-4 md:p-6">
         <div className="flex items-center justify-between">
