@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Header } from "@/components/crm/header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select"
-import { callLogs, leads } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
 import {
   Search,
@@ -25,26 +24,43 @@ import {
   Pause,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react"
 import { format } from "date-fns"
 
 export default function CallsPage() {
   const { user } = useAuth()
+  const [calls, setCalls] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [directionFilter, setDirectionFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [playingId, setPlayingId] = useState<string | null>(null)
 
-  const myCalls = callLogs.filter(c => c.assignedTo === user?.id)
+  useEffect(() => {
+    async function fetchCalls() {
+      if (!user?.id) return
+      try {
+        setLoading(true)
+        const res = await fetch(`/api/calls?assignedTo=${user.id}`)
+        const data = await res.json()
+        setCalls(Array.isArray(data) ? data : [])
+      } catch (error) {
+        console.error("Error fetching calls:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchCalls()
+  }, [user?.id])
 
-  const filteredCalls = myCalls.filter((call) => {
-    const lead = leads.find(l => l.id === call.leadId)
+  const filteredCalls = calls.filter((call) => {
     const matchesSearch = 
       call.callerTo.includes(searchQuery) ||
       call.callerNumber.includes(searchQuery) ||
       call.leadId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead?.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      (call.leadName?.toLowerCase().includes(searchQuery.toLowerCase()))
     
     const matchesDirection = directionFilter === "all" || call.direction === directionFilter
     const matchesStatus = statusFilter === "all" || call.status === statusFilter
@@ -58,6 +74,14 @@ export default function CallsPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  if (loading && calls.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header title="Call Logs" subtitle={`${filteredCalls.length} calls`} />
@@ -68,7 +92,7 @@ export default function CallsPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by phone or lead ID..."
+              placeholder="Search by phone or lead name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -106,7 +130,7 @@ export default function CallsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Calls</p>
-                  <p className="text-2xl font-bold">{myCalls.length}</p>
+                  <p className="text-2xl font-bold">{calls.length}</p>
                 </div>
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Phone className="h-5 w-5 text-primary" />
@@ -119,7 +143,7 @@ export default function CallsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Answered</p>
-                  <p className="text-2xl font-bold">{myCalls.filter(c => c.status === "answered").length}</p>
+                  <p className="text-2xl font-bold">{calls.filter(c => c.status === "answered").length}</p>
                 </div>
                 <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
                   <CheckCircle className="h-5 w-5 text-success" />
@@ -132,7 +156,7 @@ export default function CallsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Missed</p>
-                  <p className="text-2xl font-bold">{myCalls.filter(c => c.status === "missed").length}</p>
+                  <p className="text-2xl font-bold">{calls.filter(c => c.status === "missed").length}</p>
                 </div>
                 <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
                   <XCircle className="h-5 w-5 text-destructive" />
@@ -146,7 +170,7 @@ export default function CallsPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Avg Duration</p>
                   <p className="text-2xl font-bold">
-                    {formatDuration(Math.round(myCalls.reduce((acc, c) => acc + c.duration, 0) / myCalls.length || 0))}
+                    {formatDuration(Math.round(calls.reduce((acc, c) => acc + c.duration, 0) / (calls.length || 1)))}
                   </p>
                 </div>
                 <div className="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center">
@@ -168,7 +192,6 @@ export default function CallsPage() {
                 </div>
               ) : (
                 filteredCalls.map((call) => {
-                  const lead = leads.find(l => l.id === call.leadId)
                   return (
                     <div key={call.id} className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors">
                       <div className="flex items-center gap-4">
@@ -183,7 +206,7 @@ export default function CallsPage() {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{lead?.name || "Unknown"}</p>
+                            <p className="font-medium">{call.leadName || "Unknown"}</p>
                             <Badge variant="outline" className="text-xs">{call.leadId}</Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">{call.callerTo}</p>

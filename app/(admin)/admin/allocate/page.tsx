@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Header } from "@/components/crm/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,27 +23,59 @@ import {
   TableRow
 } from "@/components/ui/table"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { leads, salesExecutives, projects } from "@/lib/mock-data"
 import {
   Search,
   Filter,
   UserPlus,
   Users,
   CheckCircle,
-  ArrowRight
+  Loader2
 } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
+import type { Lead, SalesExecutive } from "@/lib/types"
 
 export default function AllocatePage() {
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [executives, setExecutives] = useState<SalesExecutive[]>([])
+  const [projects, setProjects] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [projectFilter, setProjectFilter] = useState<string>("all")
   const [selectedLeads, setSelectedLeads] = useState<string[]>([])
   const [selectedExecutive, setSelectedExecutive] = useState<string>("")
 
-  // Unassigned leads (simulated - in real app would filter by assigned status)
-  const unassignedLeads = leads.filter(l => l.status === "new")
+  const fetchAllocationData = async () => {
+    try {
+      setLoading(true)
+      const [leadsRes, execsRes, projectsRes] = await Promise.all([
+        fetch("/api/leads"),
+        fetch("/api/admin/users"),
+        fetch("/api/projects")
+      ])
+      const leadsData = await leadsRes.json()
+      const execsData = await execsRes.json()
+      const projectsData = await projectsRes.json()
+
+      setLeads(Array.isArray(leadsData) ? leadsData : [])
+      setExecutives(Array.isArray(execsData) ? execsData : [])
+      setProjects(Array.isArray(projectsData) ? projectsData : [])
+    } catch (error) {
+      console.error("Error fetching allocation data:", error)
+      toast.error("Failed to load data")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchAllocationData()
+  }, [])
+
+  // Show only unassigned leads or new leads
+  const unassignedLeads = leads.filter(l => !l.assignedTo || l.status === "new")
 
   const filteredLeads = useMemo(() => {
     return unassignedLeads.filter((lead) => {
@@ -75,13 +107,32 @@ export default function AllocatePage() {
     }
   }
 
-  const handleAllocate = () => {
+  const handleAllocate = async () => {
     if (!selectedExecutive || selectedLeads.length === 0) return
     
-    const exec = salesExecutives.find(e => e.id === selectedExecutive)
-    toast.success(`${selectedLeads.length} leads allocated to ${exec?.name}`)
-    setSelectedLeads([])
-    setSelectedExecutive("")
+    try {
+      // Basic implementation for bulk assign - calling patch for each
+      // In a real app, a bulk update API endpoint is better
+      await Promise.all(
+        selectedLeads.map(id => 
+          fetch(`/api/leads/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ assignedTo: selectedExecutive })
+          })
+        )
+      )
+
+      const exec = executives.find(e => e.id === selectedExecutive)
+      toast.success(`${selectedLeads.length} leads allocated to ${exec?.name}`)
+      setSelectedLeads([])
+      setSelectedExecutive("")
+      // Refresh data
+      fetchAllocationData()
+    } catch (error) {
+      console.error("Allocation failed", error)
+      toast.error("Failed to allocate leads")
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -96,6 +147,14 @@ export default function AllocatePage() {
     return colors[status] || "bg-secondary text-secondary-foreground"
   }
 
+  if (loading && leads.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header title="Lead Allocation" subtitle="Assign leads to your team" />
@@ -103,7 +162,7 @@ export default function AllocatePage() {
       <div className="flex-1 p-4 md:p-6 space-y-6">
         {/* Team Overview */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {salesExecutives.map((exec) => (
+          {executives.map((exec) => (
             <Card 
               key={exec.id} 
               className={`border-0 shadow-sm cursor-pointer transition-all ${
@@ -150,7 +209,7 @@ export default function AllocatePage() {
                       <SelectValue placeholder="Select executive" />
                     </SelectTrigger>
                     <SelectContent>
-                      {salesExecutives.map((exec) => (
+                      {executives.map((exec) => (
                         <SelectItem key={exec.id} value={exec.id}>
                           {exec.name}
                         </SelectItem>

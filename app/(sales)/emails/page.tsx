@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Header } from "@/components/crm/header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select"
-import { emailLogs, leads } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
 import {
   Search,
   Mail,
@@ -21,21 +21,41 @@ import {
   Eye,
   MousePointer,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from "lucide-react"
 import { format } from "date-fns"
 
 export default function EmailsPage() {
+  const { user } = useAuth()
+  const [emails, setEmails] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  const filteredEmails = emailLogs.filter((email) => {
-    const lead = leads.find(l => l.id === email.leadId)
+  useEffect(() => {
+    async function fetchEmails() {
+      if (!user?.id) return
+      try {
+        setLoading(true)
+        const res = await fetch(`/api/emails?assignedTo=${user.id}`)
+        const data = await res.json()
+        setEmails(Array.isArray(data) ? data : [])
+      } catch (error) {
+        console.error("Error fetching emails:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchEmails()
+  }, [user?.id])
+
+  const filteredEmails = emails.filter((email) => {
     const matchesSearch = 
       email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       email.to.toLowerCase().includes(searchQuery.toLowerCase()) ||
       email.leadId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lead?.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      (email.leadName?.toLowerCase().includes(searchQuery.toLowerCase()))
     
     const matchesStatus = statusFilter === "all" || email.status === statusFilter
 
@@ -64,6 +84,14 @@ export default function EmailsPage() {
     }
   }
 
+  if (loading && emails.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header title="Emails" subtitle={`${filteredEmails.length} emails`} />
@@ -74,7 +102,7 @@ export default function EmailsPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search by subject, email, or lead..."
+              placeholder="Search by subject, email, or lead name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -102,7 +130,7 @@ export default function EmailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold">{emailLogs.length}</p>
+                  <p className="text-2xl font-bold">{emails.length}</p>
                 </div>
                 <Mail className="h-5 w-5 text-muted-foreground" />
               </div>
@@ -113,7 +141,7 @@ export default function EmailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Delivered</p>
-                  <p className="text-2xl font-bold">{emailLogs.filter(e => e.status === "delivered").length}</p>
+                  <p className="text-2xl font-bold">{emails.filter(e => e.status === "delivered").length}</p>
                 </div>
                 <CheckCircle className="h-5 w-5 text-chart-1" />
               </div>
@@ -124,7 +152,7 @@ export default function EmailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Opened</p>
-                  <p className="text-2xl font-bold">{emailLogs.filter(e => e.status === "opened").length}</p>
+                  <p className="text-2xl font-bold">{emails.filter(e => e.status === "opened").length}</p>
                 </div>
                 <Eye className="h-5 w-5 text-success" />
               </div>
@@ -135,7 +163,7 @@ export default function EmailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Clicked</p>
-                  <p className="text-2xl font-bold">{emailLogs.filter(e => e.status === "clicked").length}</p>
+                  <p className="text-2xl font-bold">{emails.filter(e => e.status === "clicked").length}</p>
                 </div>
                 <MousePointer className="h-5 w-5 text-primary" />
               </div>
@@ -146,7 +174,7 @@ export default function EmailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Bounced</p>
-                  <p className="text-2xl font-bold">{emailLogs.filter(e => e.status === "bounced").length}</p>
+                  <p className="text-2xl font-bold">{emails.filter(e => e.status === "bounced").length}</p>
                 </div>
                 <AlertCircle className="h-5 w-5 text-destructive" />
               </div>
@@ -165,7 +193,6 @@ export default function EmailsPage() {
                 </div>
               ) : (
                 filteredEmails.map((email) => {
-                  const lead = leads.find(l => l.id === email.leadId)
                   return (
                     <div key={email.id} className="p-4 hover:bg-accent/50 transition-colors cursor-pointer">
                       <div className="flex items-start justify-between gap-4">
@@ -176,7 +203,7 @@ export default function EmailsPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <p className="font-medium truncate">{email.subject}</p>
-                              <Badge variant="outline" className="text-xs flex-shrink-0">{email.leadId}</Badge>
+                              <Badge variant="outline" className="text-xs flex-shrink-0">{email.leadName || email.leadId}</Badge>
                             </div>
                             <p className="text-sm text-muted-foreground truncate">To: {email.to}</p>
                             <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{email.body}</p>
