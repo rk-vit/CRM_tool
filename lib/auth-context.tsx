@@ -16,13 +16,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    })
-    return !!res?.ok
+  const res = await signIn("credentials", {
+    email,
+    password,
+    redirect: false,
+  });
+
+  if (!res || res.error) {
+    return false;
   }
+
+  return true;
+};
 
   const logout = () => {
     signOut({ callbackUrl: "/" })

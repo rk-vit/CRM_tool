@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Building2, Eye, EyeOff, ShieldCheck, Mail, Lock } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-
+import { useToast } from "@/hooks/use-toast"
+import { toast } from "@/hooks/use-toast"
 export default function LoginPage() {
+
+  const { toast } = useToast()
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -16,29 +19,34 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const { login, user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (mounted && isAuthenticated && user) {
+      router.push(user.role === "admin" ? "/admin" : "/dashboard");
+    }
+  }, [mounted, isAuthenticated, user, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
     try {
-      const res = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
+      const res = await login(email, password);
 
-      if (res?.ok) {
-        router.push(email.includes("admin") ? "/admin" : "/dashboard");
-      } else {
-        setError("Invalid email or password. Please try again.");
-        setIsLoading(false);
+      if (!res) {
+        toast({
+          title: "Login Failed",
+          description: "Invalid email or password",
+          variant: "destructive",
+        })
+        setIsLoading(false)
       }
+      // Redirection is handled by the useEffect
     } catch (err) {
       console.error("Login error:", err);
       setError("An unexpected error occurred. Please try again.");
@@ -55,15 +63,9 @@ export default function LoginPage() {
       role === "admin" ? "admin@123" : "user1@123";
     
     try {
-      const res = await signIn("credentials", {
-        email: demoEmail,
-        password: demoPassword,
-        redirect: false,
-      });
+      const success = await login(demoEmail, demoPassword);
 
-      if (res?.ok) {
-        router.push(role === "admin" ? "/admin" : "/dashboard");
-      } else {
+      if (!success) {
         setError("Demo login failed. Please try again.");
         setIsLoading(false);
       }
@@ -74,8 +76,12 @@ export default function LoginPage() {
     }
   };
 
-  if (!mounted) {
-    return <div className="min-h-screen bg-slate-50 dark:bg-slate-950" />;
+  if (!mounted || (isAuthenticated && user)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Spinner className="h-8 w-8 text-primary" />
+      </div>
+    );
   }
 
   return (

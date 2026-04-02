@@ -1,11 +1,12 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Header } from "@/components/crm/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { leads, salesExecutives, callLogs, projects } from "@/lib/mock-data"
+import { Loader2 } from "lucide-react"
 import {
   BarChart,
   Bar,
@@ -21,8 +22,44 @@ import {
   Line,
   Legend
 } from "recharts"
+import type { Lead, SalesExecutive, CallLog } from "@/lib/types"
 
 export default function AnalyticsPage() {
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [executives, setExecutives] = useState<SalesExecutive[]>([])
+  const [projects, setProjects] = useState<string[]>([])
+  const [calls, setCalls] = useState<CallLog[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchAnalyticsData() {
+      try {
+        setLoading(true)
+        const [leadsRes, execsRes, projectsRes, callsRes] = await Promise.all([
+          fetch("/api/leads"),
+          fetch("/api/admin/users"),
+          fetch("/api/projects"),
+          fetch("/api/calls")
+        ])
+        const leadsData = await leadsRes.json()
+        const execsData = await execsRes.json()
+        const projectsData = await projectsRes.json()
+        const callsData = await callsRes.json()
+
+        setLeads(Array.isArray(leadsData) ? leadsData : [])
+        setExecutives(Array.isArray(execsData) ? execsData : [])
+        setProjects(Array.isArray(projectsData) ? projectsData : [])
+        setCalls(Array.isArray(callsData) ? callsData : [])
+      } catch (error) {
+        console.error("Error fetching analytics data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAnalyticsData()
+  }, [])
+
   // Lead source distribution
   const sourceData = [
     { name: "Google Ads", value: leads.filter(l => l.source === "google_ads").length },
@@ -31,10 +68,10 @@ export default function AnalyticsPage() {
     { name: "Referral", value: leads.filter(l => l.source === "referral").length },
     { name: "99 Acres", value: leads.filter(l => l.source === "99acres").length },
     { name: "MagicBricks", value: leads.filter(l => l.source === "magicbricks").length }
-  ]
+  ].filter(s => s.value > 0) // Only show sources with data
 
   // Team performance data
-  const teamData = salesExecutives.map(exec => ({
+  const teamData = executives.map(exec => ({
     name: exec.name.split(" ")[0],
     leads: exec.leadsAssigned,
     converted: exec.leadsConverted,
@@ -49,16 +86,16 @@ export default function AnalyticsPage() {
     { name: "Negotiation", value: leads.filter(l => l.status === "negotiation").length, color: "#f59e0b" },
     { name: "Won", value: leads.filter(l => l.status === "won").length, color: "#8b5cf6" },
     { name: "Lost", value: leads.filter(l => l.status === "lost").length, color: "#ef4444" }
-  ]
+  ].filter(s => s.value > 0)
 
   // Project performance
   const projectData = projects.map(project => ({
     name: project.split(" ").slice(0, 2).join(" "),
     leads: leads.filter(l => l.project === project).length,
     converted: leads.filter(l => l.project === project && l.status === "won").length
-  }))
+  })).filter(p => p.leads > 0)
 
-  // Weekly trend data (simulated)
+  // Weekly trend data (simulated for visual completeness until a time-series API is built)
   const trendData = [
     { week: "Week 1", leads: 45, calls: 120, conversions: 5 },
     { week: "Week 2", leads: 52, calls: 145, conversions: 7 },
@@ -67,6 +104,20 @@ export default function AnalyticsPage() {
   ]
 
   const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"]
+
+  const totalWon = leads.filter(l => l.status === "won").length
+  const conversionRate = leads.length > 0 ? Math.round((totalWon / leads.length) * 100) : 0
+  const answeredCalls = calls.filter(c => c.status === "answered").length
+  const callSuccessRate = calls.length > 0 ? Math.round((answeredCalls / calls.length) * 100) : 0
+  const totalExecCalls = executives.reduce((a, b) => a + b.totalCalls, 0)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -78,33 +129,29 @@ export default function AnalyticsPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">Conversion Rate</p>
-              <p className="text-3xl font-bold text-primary">
-                {Math.round((leads.filter(l => l.status === "won").length / leads.length) * 100)}%
-              </p>
-              <Progress value={14} className="mt-2 h-1" />
+              <p className="text-3xl font-bold text-primary">{conversionRate}%</p>
+              <Progress value={conversionRate} className="mt-2 h-1" />
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Avg Response Time</p>
-              <p className="text-3xl font-bold text-success">2.4h</p>
-              <p className="text-xs text-muted-foreground mt-1">-12% from last week</p>
+              <p className="text-sm text-muted-foreground">Total Leads</p>
+              <p className="text-3xl font-bold text-success">{leads.length}</p>
+              <p className="text-xs text-muted-foreground mt-1">Active in system</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">Total Calls</p>
-              <p className="text-3xl font-bold">{salesExecutives.reduce((a, b) => a + b.totalCalls, 0)}</p>
-              <p className="text-xs text-success mt-1">+8% from last week</p>
+              <p className="text-sm text-muted-foreground">Total Exec Calls</p>
+              <p className="text-3xl font-bold">{totalExecCalls}</p>
+              <p className="text-xs text-success mt-1">Logged by team</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">Call Success Rate</p>
-              <p className="text-3xl font-bold">
-                {Math.round((callLogs.filter(c => c.status === "answered").length / callLogs.length) * 100)}%
-              </p>
-              <Progress value={75} className="mt-2 h-1" />
+              <p className="text-3xl font-bold">{callSuccessRate}%</p>
+              <Progress value={callSuccessRate} className="mt-2 h-1" />
             </CardContent>
           </Card>
         </div>
@@ -122,7 +169,7 @@ export default function AnalyticsPage() {
               {/* Weekly Trends */}
               <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Weekly Trends</CardTitle>
+                  <CardTitle className="text-lg">Weekly Trends (Simulated)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
@@ -155,25 +202,31 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={statusData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={100}
-                          paddingAngle={2}
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {statusData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {statusData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={statusData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={100}
+                            paddingAngle={2}
+                            dataKey="value"
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {statusData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-muted-foreground">
+                        No status data available
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -187,31 +240,37 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={teamData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="name" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px"
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="leads" fill="#3b82f6" name="Leads Assigned" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="converted" fill="#22c55e" name="Converted" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="calls" fill="#f59e0b" name="Total Calls" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {teamData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={teamData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="name" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px"
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="leads" fill="#3b82f6" name="Leads Assigned" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="converted" fill="#22c55e" name="Converted" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="calls" fill="#f59e0b" name="Total Calls" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                      No team data available
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             {/* Individual Performance Cards */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {salesExecutives.map((exec) => (
+              {executives.map((exec) => (
                 <Card key={exec.id} className="border-0 shadow-sm">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3 mb-4">
@@ -258,23 +317,29 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={sourceData}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={100}
-                          dataKey="value"
-                          label={({ name, value }) => `${name}: ${value}`}
-                        >
-                          {sourceData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {sourceData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={sourceData}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={100}
+                            dataKey="value"
+                            label={({ name, value }) => `${name}: ${value}`}
+                          >
+                            {sourceData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-muted-foreground">
+                        No source data available
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -285,6 +350,9 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
+                    {sourceData.length === 0 && (
+                      <p className="text-muted-foreground text-sm">No data to display.</p>
+                    )}
                     {sourceData.map((source, index) => (
                       <div key={source.name} className="flex items-center gap-3">
                         <div 
@@ -311,23 +379,29 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={projectData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis type="number" className="text-xs" />
-                      <YAxis dataKey="name" type="category" width={100} className="text-xs" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px"
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="leads" fill="#3b82f6" name="Total Leads" radius={[0, 4, 4, 0]} />
-                      <Bar dataKey="converted" fill="#22c55e" name="Converted" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {projectData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={projectData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis type="number" className="text-xs" />
+                        <YAxis dataKey="name" type="category" width={100} className="text-xs" />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px"
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="leads" fill="#3b82f6" name="Total Leads" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="converted" fill="#22c55e" name="Converted" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                      No project data available
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

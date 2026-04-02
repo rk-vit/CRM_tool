@@ -1,14 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
+import { useState, useEffect } from "react"
 import { Header } from "@/components/crm/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
   TableBody,
@@ -17,313 +14,185 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table"
-import { salesExecutives, leads, callLogs, timelineEvents } from "@/lib/mock-data"
 import {
-  Users,
-  Phone,
-  TrendingUp,
-  Eye,
+  Search,
+  Plus,
   Mail,
-  Calendar,
-  Clock,
-  ArrowRight
+  Phone,
+  MoreVertical,
+  TrendingUp,
+  Users,
+  CheckCircle2,
+  Loader2
 } from "lucide-react"
-import { format, formatDistanceToNow } from "date-fns"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
+import type { SalesExecutive } from "@/lib/types"
 
 export default function TeamPage() {
-  const [selectedMember, setSelectedMember] = useState<string | null>(null)
+  const [executives, setExecutives] = useState<SalesExecutive[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
 
-  const selectedExec = selectedMember 
-    ? salesExecutives.find(e => e.id === selectedMember)
-    : null
+  useEffect(() => {
+    async function fetchTeam() {
+      try {
+        setLoading(true)
+        const res = await fetch("/api/admin/users")
+        const data = await res.json()
+        setExecutives(Array.isArray(data) ? data : [])
+      } catch (error) {
+        console.error("Error fetching team data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  const memberLeads = selectedMember 
-    ? leads.filter(l => l.assignedTo === selectedMember)
-    : []
+    fetchTeam()
+  }, [])
 
-  const memberCalls = selectedMember
-    ? callLogs.filter(c => c.assignedTo === selectedMember)
-    : []
+  const filteredExecutives = executives.filter(exec => 
+    exec.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    exec.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
-  const memberTimeline = selectedMember
-    ? timelineEvents.filter(e => {
-        const lead = leads.find(l => l.id === e.leadId)
-        return lead?.assignedTo === selectedMember
-      })
-    : []
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Team Management" subtitle="Monitor team performance" />
+      <Header 
+        title="Team Management" 
+        subtitle="Manage sales executives and track their individual performance" 
+      />
 
       <div className="flex-1 p-4 md:p-6 space-y-6">
-        {/* Team Overview Cards */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {salesExecutives.map((exec) => (
-            <Card 
-              key={exec.id} 
-              className={`border-0 shadow-sm cursor-pointer transition-all ${
-                selectedMember === exec.id 
-                  ? "ring-2 ring-primary" 
-                  : "hover:shadow-md"
-              }`}
-              onClick={() => setSelectedMember(selectedMember === exec.id ? null : exec.id)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {exec.name.split(" ").map(n => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold">{exec.name}</p>
-                    <p className="text-xs text-muted-foreground">Sales Executive</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Conversion</span>
-                    <span className="font-semibold">{exec.conversionRate}%</span>
-                  </div>
-                  <Progress value={exec.conversionRate} className="h-2" />
-                </div>
-                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border">
-                  <div className="text-center">
-                    <p className="font-bold text-lg">{exec.leadsAssigned}</p>
-                    <p className="text-xs text-muted-foreground">Leads</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-bold text-lg text-success">{exec.leadsConverted}</p>
-                    <p className="text-xs text-muted-foreground">Won</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-bold text-lg">{exec.totalCalls}</p>
-                    <p className="text-xs text-muted-foreground">Calls</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Selected Member Details */}
-        {selectedExec && (
+        {/* Team Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {selectedExec.name.split(" ").map(n => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">{selectedExec.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{selectedExec.email}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Phone className="h-4 w-4 mr-2" /> Call
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Mail className="h-4 w-4 mr-2" /> Email
-                  </Button>
-                </div>
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <Users className="h-6 w-6" />
               </div>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="leads">
-                <TabsList>
-                  <TabsTrigger value="leads" className="gap-2">
-                    <Users className="h-4 w-4" />
-                    Leads ({memberLeads.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="calls" className="gap-2">
-                    <Phone className="h-4 w-4" />
-                    Calls ({memberCalls.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="activity" className="gap-2">
-                    <Clock className="h-4 w-4" />
-                    Activity
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="leads" className="mt-4">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-secondary/50">
-                          <TableHead>ID</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead className="hidden md:table-cell">Phone</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="hidden md:table-cell">Last Updated</TableHead>
-                          <TableHead>Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {memberLeads.slice(0, 5).map((lead) => (
-                          <TableRow key={lead.id}>
-                            <TableCell className="font-medium text-primary">{lead.id}</TableCell>
-                            <TableCell>{lead.name}</TableCell>
-                            <TableCell className="hidden md:table-cell">{lead.phone}</TableCell>
-                            <TableCell>
-                              <Badge className={
-                                lead.status === "qualified" ? "bg-success text-success-foreground" :
-                                lead.status === "new" ? "bg-chart-1 text-white" :
-                                lead.status === "won" ? "bg-primary text-primary-foreground" :
-                                "bg-secondary text-secondary-foreground"
-                              }>
-                                {lead.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                              {formatDistanceToNow(new Date(lead.updatedAt), { addSuffix: true })}
-                            </TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="sm" asChild>
-                                <Link href={`/admin/leads/${lead.id}`}>
-                                  <Eye className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="calls" className="mt-4">
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                    {memberCalls.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Phone className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>No calls recorded</p>
-                      </div>
-                    ) : (
-                      memberCalls.map((call) => {
-                        const lead = leads.find(l => l.id === call.leadId)
-                        return (
-                          <div key={call.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
-                            <div className="flex items-center gap-3">
-                              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                                call.direction === "outbound" ? "bg-success/10 text-success" : "bg-chart-1/10 text-chart-1"
-                              }`}>
-                                <Phone className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-sm">{lead?.name || "Unknown"}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {format(new Date(call.createdAt), "MMM dd, hh:mm a")} | {Math.floor(call.duration / 60)}:{(call.duration % 60).toString().padStart(2, '0')}
-                                </p>
-                              </div>
-                            </div>
-                            <Badge variant="outline" className={
-                              call.status === "answered" ? "text-success border-success" : "text-destructive border-destructive"
-                            }>
-                              {call.status}
-                            </Badge>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="activity" className="mt-4">
-                  <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                    {memberTimeline.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>No activity recorded</p>
-                      </div>
-                    ) : (
-                      memberTimeline.slice(0, 10).map((event, index) => (
-                        <div key={event.id} className="flex gap-3">
-                          <div className="relative flex flex-col items-center">
-                            <div className={`h-2 w-2 rounded-full ${
-                              event.type === "call" ? "bg-success" :
-                              event.type === "email" ? "bg-chart-1" :
-                              event.type === "status_change" ? "bg-warning" :
-                              "bg-muted-foreground"
-                            }`} />
-                            {index < memberTimeline.length - 1 && (
-                              <div className="flex-1 w-px bg-border mt-1" />
-                            )}
-                          </div>
-                          <div className="flex-1 pb-4">
-                            <p className="text-sm font-medium">{event.title}</p>
-                            <p className="text-xs text-muted-foreground">{event.description}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Summary Stats */}
-        <div className="grid sm:grid-cols-4 gap-4">
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Team</p>
-                  <p className="text-2xl font-bold">{salesExecutives.length}</p>
-                </div>
-                <Users className="h-8 w-8 text-primary" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total Members</p>
+                <p className="text-2xl font-bold">{executives.length}</p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Avg Conversion</p>
-                  <p className="text-2xl font-bold">
-                    {(salesExecutives.reduce((a, b) => a + b.conversionRate, 0) / salesExecutives.length).toFixed(1)}%
-                  </p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-success" />
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Avg. Conversion</p>
+                <p className="text-2xl font-bold">
+                  {(executives.reduce((acc, curr) => acc + curr.conversionRate, 0) / (executives.length || 1)).toFixed(1)}%
+                </p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Leads</p>
-                  <p className="text-2xl font-bold">
-                    {salesExecutives.reduce((a, b) => a + b.leadsAssigned, 0)}
-                  </p>
-                </div>
-                <Users className="h-8 w-8 text-chart-1" />
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6" />
               </div>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Calls</p>
-                  <p className="text-2xl font-bold">
-                    {salesExecutives.reduce((a, b) => a + b.totalCalls, 0)}
-                  </p>
-                </div>
-                <Phone className="h-8 w-8 text-warning" />
+              <div>
+                <p className="text-sm text-muted-foreground">Active Leads</p>
+                <p className="text-2xl font-bold">
+                  {executives.reduce((acc, curr) => acc + curr.leadsAssigned, 0)}
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Actions Row */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+          <div className="relative w-full sm:w-[300px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search team members..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" /> Add Executive
+          </Button>
+        </div>
+
+        {/* Team Table */}
+        <Card className="border-0 shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Executive</TableHead>
+                <TableHead>Leads Assigned</TableHead>
+                <TableHead>Converted</TableHead>
+                <TableHead>Conv. Rate</TableHead>
+                <TableHead>Calls Made</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredExecutives.map((exec) => (
+                <TableRow key={exec.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                        {exec.name.split(" ").map(n => n[0]).join("")}
+                      </div>
+                      <div>
+                        <p className="font-medium">{exec.name}</p>
+                        <p className="text-xs text-muted-foreground">{exec.email}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{exec.leadsAssigned}</TableCell>
+                  <TableCell>{exec.leadsConverted}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-16 bg-secondary rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary" 
+                          style={{ width: `${exec.conversionRate}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium">{exec.conversionRate}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{exec.totalCalls}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>View Performance</DropdownMenuItem>
+                        <DropdownMenuItem>Edit Profile</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">Deactivate</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       </div>
     </div>
   )

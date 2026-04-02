@@ -1,12 +1,32 @@
 "use client"
 
-import { useState, use } from "react"
-import Link from "next/link"
+import { useState, useEffect, use } from "react"
 import { Header } from "@/components/crm/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
+import {
+  Phone,
+  Mail,
+  Calendar,
+  User,
+  Tag,
+  MessageSquare,
+  History,
+  FileText,
+  Loader2,
+  ExternalLink,
+  ArrowLeft, 
+  Zap,
+  ChevronDown,
+  Send,
+  PhoneCall
+} from "lucide-react"
+import Link from "next/link"
+import { format } from "date-fns"
+import type { Lead, TimelineEvent, CallLog, EmailLog, Comment, LeadStatus, LeadSubStatus } from "@/lib/types"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
@@ -15,132 +35,162 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger
-} from "@/components/ui/sheet"
-import { leads, timelineEvents, callLogs, emailLogs, comments } from "@/lib/mock-data"
-import type { LeadStatus, LeadSubStatus } from "@/lib/types"
-import {
-  ArrowLeft,
-  Phone,
-  Mail,
-  MessageSquare,
-  Calendar,
-  Clock,
-  User,
-  Building,
-  DollarSign,
-  FileText,
-  Play,
-  Download,
-  Send,
-  Plus,
-  Zap,
-  ChevronDown,
-  PhoneOutgoing,
-  PhoneIncoming,
-  CheckCircle,
-  XCircle
-} from "lucide-react"
-import { format, formatDistanceToNow } from "date-fns"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
-export default function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function LeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const lead = leads.find(l => l.id === id)
-  const [activeTab, setActiveTab] = useState("timeline")
-  const [newComment, setNewComment] = useState("")
   const [quickActionOpen, setQuickActionOpen] = useState(false)
+  const [emailSheetOpen, setEmailSheetOpen] = useState(false)
+  const [emailSubject, setEmailSubject] = useState("")
+  const [emailContent, setEmailContent] = useState("")
+  const [isCalling, setIsCalling] = useState(false)
+  const [data, setData] = useState<{
+    lead: Lead;
+    timeline: TimelineEvent[];
+    calls: CallLog[];
+    emails: EmailLog[];
+    comments: Comment[];
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  if (!lead) {
+  const fetchLeadDetails = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/leads/${id}`)
+      if (!res.ok) throw new Error("Failed to fetch lead details")
+      const json = await res.json()
+      setData(json)
+    } catch (err) {
+      console.error(err)
+      setError("Could not load lead details. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleExotelCall = async () => {
+    try {
+      setIsCalling(true)
+      const response = await fetch('/api/calls/exotel-initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          leadId: lead.id,
+          to: lead.phone 
+        })
+      })
+      if (!response.ok) throw new Error("Call failed to initiate")
+      console.log("Call initiated via Exotel")
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsCalling(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLeadDetails()
+  }, [id])
+
+  if (loading) {
     return (
-      <div className="flex flex-col min-h-screen">
-        <Header title="Lead Not Found" />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-muted-foreground">Lead with ID {id} not found</p>
-            <Button asChild className="mt-4">
-              <Link href="/leads">Back to Leads</Link>
-            </Button>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
 
-  const leadTimeline = timelineEvents.filter(e => e.leadId === lead.id)
-  const leadCalls = callLogs.filter(c => c.leadId === lead.id)
-  const leadEmails = emailLogs.filter(e => e.leadId === lead.id)
-  const leadComments = comments.filter(c => c.leadId === lead.id)
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      new: "bg-chart-1 text-white",
-      contacted: "bg-chart-2 text-white",
-      qualified: "bg-success text-success-foreground",
-      negotiation: "bg-warning text-warning-foreground",
-      won: "bg-chart-2 text-white",
-      lost: "bg-destructive text-destructive-foreground"
-    }
-    return colors[status] || "bg-secondary text-secondary-foreground"
+  if (error || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+        <p className="text-destructive font-medium">{error || "Lead not found"}</p>
+        <Button asChild variant="outline">
+          <Link href="/leads">Back to Leads</Link>
+        </Button>
+      </div>
+    )
   }
 
-  const getSubStatusColor = (subStatus: string) => {
-    const colors: Record<string, string> = {
-      hot: "bg-destructive/10 text-destructive",
-      warm: "bg-warning/10 text-warning",
-      cold: "bg-chart-1/10 text-chart-1"
-    }
-    return colors[subStatus] || ""
-  }
-
-  const getTimelineIcon = (type: string) => {
-    const icons: Record<string, React.ReactNode> = {
-      call: <Phone className="h-4 w-4" />,
-      email: <Mail className="h-4 w-4" />,
-      comment: <MessageSquare className="h-4 w-4" />,
-      status_change: <Zap className="h-4 w-4" />,
-      workflow: <Zap className="h-4 w-4" />,
-      sms: <MessageSquare className="h-4 w-4" />,
-      whatsapp: <MessageSquare className="h-4 w-4" />,
-      meeting: <Calendar className="h-4 w-4" />
-    }
-    return icons[type] || <Clock className="h-4 w-4" />
-  }
+  const { lead, timeline, calls, emails, comments } = data
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header 
-        title={`Lead Details`} 
-        subtitle={`${lead.id} - ${lead.name}`}
-      />
+      <Header title={`Lead Details`} subtitle={`${lead.id} - ${lead.name}`} />
 
       <div className="flex-1 p-4 md:p-6 space-y-4">
-        {/* Back Button & Actions */}
         <div className="flex items-center justify-between">
           <Button variant="ghost" asChild>
             <Link href="/leads">
               <ArrowLeft className="h-4 w-4 mr-2" /> Back to Leads
             </Link>
           </Button>
+          
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Phone className="h-4 w-4 mr-2" /> Call
-            </Button>
-            <Button variant="outline" size="sm" className="hidden sm:flex">
-              <Mail className="h-4 w-4 mr-2" /> Email
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={isCalling}>
+                  {isCalling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Phone className="h-4 w-4 mr-2" />}
+                  Call <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExotelCall} className="cursor-pointer font-medium text-primary">
+                  <PhoneCall className="h-4 w-4 mr-2" /> Call Now
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer text-muted-foreground">
+                  Cancel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Sheet open={emailSheetOpen} onOpenChange={setEmailSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="hidden sm:flex">
+                  <Mail className="h-4 w-4 mr-2" /> Email
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="sm:max-w-xl flex flex-auto p-6 overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Send Email</SheetTitle>
+                </SheetHeader>
+                <div className="flex-1 space-y-4 mt-6 flex flex-col overflow-hidden">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">To</label>
+                    <Input value={lead.email} readOnly className="bg-muted" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Subject</label>
+                    <Input 
+                      placeholder="Email Title / Subject" 
+                      value={emailSubject}
+                      onChange={(e) => setEmailSubject(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 flex-1 flex flex-col">
+                    <label className="text-sm font-medium">Content</label>
+                    <Textarea 
+                      placeholder="Type your mail content here..." 
+                      className="flex-1 min-h-[300px] resize-none" 
+                      value={emailContent}
+                      onChange={(e) => setEmailContent(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <SheetFooter className="pt-4">
+                  <Button onClick={() => setEmailSheetOpen(false)} className="w-full">
+                    <Send className="h-4 w-4 mr-2" /> Send Email
+                  </Button>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+
             <Sheet open={quickActionOpen} onOpenChange={setQuickActionOpen}>
               <SheetTrigger asChild>
                 <Button size="sm">
@@ -151,361 +201,177 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                 <SheetHeader>
                   <SheetTitle>Quick Action</SheetTitle>
                 </SheetHeader>
-                <QuickActionForm lead={lead} onClose={() => setQuickActionOpen(false)} />
+                <QuickActionForm 
+                  lead={lead} 
+                  onClose={() => setQuickActionOpen(false)} 
+                  refreshData={fetchLeadDetails}
+                />
               </SheetContent>
             </Sheet>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Lead Info Panel */}
-          <Card className="border-0 shadow-sm lg:col-span-1">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Lead Information</CardTitle>
-                <Badge className={getStatusColor(lead.status)}>
-                  {lead.status.replace("_", " ")}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold">
-                  {lead.name.split(" ").map(n => n[0]).join("")}
+          <div className="lg:col-span-1 space-y-6">
+            <Card className="border-0 shadow-sm bg-primary text-primary-foreground">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="secondary" className="w-full" onClick={handleExotelCall}>
+                    <Phone className="h-4 w-4 mr-2" /> Call
+                  </Button>
+                  <Button variant="secondary" className="w-full" onClick={() => setEmailSheetOpen(true)}>
+                    <Mail className="h-4 w-4 mr-2" /> Email
+                  </Button>
+                  <Button variant="secondary" className="w-full bg-white/10 hover:bg-white/20 border-0 text-white">
+                    <Calendar className="h-4 w-4 mr-2" /> Schedule
+                  </Button>
+                  <Button variant="secondary" className="w-full bg-white/10 hover:bg-white/20 border-0 text-white">
+                    <MessageSquare className="h-4 w-4 mr-2" /> WhatsApp
+                  </Button>
                 </div>
-                <div>
-                  <p className="font-semibold">{lead.name}</p>
-                  <Badge variant="outline" className={getSubStatusColor(lead.subStatus)}>
-                    {lead.subStatus}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <InfoRow icon={Phone} label="Phone" value={lead.phone} />
-                {lead.alternatePhone && (
-                  <InfoRow icon={Phone} label="Alt. Phone" value={lead.alternatePhone} />
-                )}
-                <InfoRow icon={Mail} label="Email" value={lead.email} />
-                <InfoRow icon={Building} label="Project" value={lead.project} />
-                <InfoRow icon={User} label="Source" value={lead.medium} />
-                {lead.budget && <InfoRow icon={DollarSign} label="Budget" value={lead.budget} />}
-                <InfoRow icon={User} label="Assigned To" value={lead.assignedToName} />
-                <InfoRow 
-                  icon={Calendar} 
-                  label="Created" 
-                  value={format(new Date(lead.createdAt), "MMM dd, yyyy hh:mm a")} 
-                />
-                {lead.followUpDate && (
-                  <InfoRow 
-                    icon={Clock} 
-                    label="Follow-up" 
-                    value={format(new Date(lead.followUpDate), "MMM dd, yyyy hh:mm a")} 
-                  />
-                )}
-              </div>
-
-              {lead.requirements && (
-                <div className="pt-3 border-t border-border">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Requirements</p>
-                  <p className="text-sm">{lead.requirements}</p>
-                </div>
-              )}
-
-              {lead.notes && (
-                <div className="pt-3 border-t border-border">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Notes</p>
-                  <p className="text-sm">{lead.notes}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Activity Tabs */}
-          <Card className="border-0 shadow-sm lg:col-span-2">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <CardHeader className="pb-0">
-                <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-secondary">
-                  <TabsTrigger value="timeline" className="gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span className="hidden sm:inline">Timeline</span>
-                    <Badge variant="secondary" className="h-5 px-1.5">{leadTimeline.length}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="comments" className="gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="hidden sm:inline">Comments</span>
-                    <Badge variant="secondary" className="h-5 px-1.5">{leadComments.length}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="calls" className="gap-2">
-                    <Phone className="h-4 w-4" />
-                    <span className="hidden sm:inline">Calls</span>
-                    <Badge variant="secondary" className="h-5 px-1.5">{leadCalls.length}</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger value="emails" className="gap-2">
-                    <Mail className="h-4 w-4" />
-                    <span className="hidden sm:inline">Emails</span>
-                    <Badge variant="secondary" className="h-5 px-1.5">{leadEmails.length}</Badge>
-                  </TabsTrigger>
-                </TabsList>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <TabsContent value="timeline" className="mt-0">
-                  <TimelineTab events={leadTimeline} />
-                </TabsContent>
-                <TabsContent value="comments" className="mt-0">
-                  <CommentsTab 
-                    comments={leadComments} 
-                    newComment={newComment}
-                    setNewComment={setNewComment}
-                  />
-                </TabsContent>
-                <TabsContent value="calls" className="mt-0">
-                  <CallsTab calls={leadCalls} />
-                </TabsContent>
-                <TabsContent value="emails" className="mt-0">
-                  <EmailsTab emails={leadEmails} />
-                </TabsContent>
               </CardContent>
-            </Tabs>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
-}
+            </Card>
 
-function InfoRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>, label: string, value: string }) {
-  return (
-    <div className="flex items-center gap-3 text-sm">
-      <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-      <span className="text-muted-foreground w-24 flex-shrink-0">{label}</span>
-      <span className="font-medium truncate">{value}</span>
-    </div>
-  )
-}
-
-function TimelineTab({ events }: { events: typeof timelineEvents }) {
-  const getTimelineIcon = (type: string) => {
-    const icons: Record<string, React.ReactNode> = {
-      call: <Phone className="h-4 w-4" />,
-      email: <Mail className="h-4 w-4" />,
-      comment: <MessageSquare className="h-4 w-4" />,
-      status_change: <Zap className="h-4 w-4" />,
-      workflow: <Zap className="h-4 w-4" />,
-      sms: <MessageSquare className="h-4 w-4" />,
-      whatsapp: <MessageSquare className="h-4 w-4" />,
-      meeting: <Calendar className="h-4 w-4" />
-    }
-    return icons[type] || <Clock className="h-4 w-4" />
-  }
-
-  const getTimelineColor = (type: string) => {
-    const colors: Record<string, string> = {
-      call: "bg-success text-success-foreground",
-      email: "bg-chart-1 text-white",
-      status_change: "bg-warning text-warning-foreground",
-      workflow: "bg-primary text-primary-foreground",
-      comment: "bg-secondary text-secondary-foreground"
-    }
-    return colors[type] || "bg-muted text-muted-foreground"
-  }
-
-  if (events.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
-        <p>No activity yet</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-      {events.map((event, index) => (
-        <div key={event.id} className="flex gap-3">
-          <div className="relative flex flex-col items-center">
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full ${getTimelineColor(event.type)}`}>
-              {getTimelineIcon(event.type)}
-            </div>
-            {index < events.length - 1 && (
-              <div className="flex-1 w-px bg-border mt-2" />
-            )}
-          </div>
-          <div className="flex-1 pb-4">
-            <div className="flex items-start justify-between">
-              <p className="font-medium text-sm">{event.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {format(new Date(event.createdAt), "MMM dd, yyyy hh:mm a")}
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function CommentsTab({ 
-  comments, 
-  newComment, 
-  setNewComment 
-}: { 
-  comments: typeof import("@/lib/mock-data").comments
-  newComment: string
-  setNewComment: (v: string) => void
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <Textarea 
-          placeholder="Add your comment here..."
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          className="min-h-[80px]"
-        />
-      </div>
-      <Button className="w-full sm:w-auto">
-        <Send className="h-4 w-4 mr-2" /> Post Comment
-      </Button>
-
-      <div className="border-t border-border pt-4 space-y-4 max-h-[400px] overflow-y-auto">
-        {comments.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No comments yet</p>
-          </div>
-        ) : (
-          comments.map((comment) => (
-            <div key={comment.id} className="p-3 rounded-lg bg-secondary/50">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
-                    {comment.createdByName.split(" ").map(n => n[0]).join("")}
-                  </div>
-                  <span className="font-medium text-sm">{comment.createdByName}</span>
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <User className="h-4 w-4" /> Contact Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">Phone</p>
+                  <p className="font-medium flex items-center justify-between">
+                    {lead.phone}
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </p>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                </span>
-              </div>
-              <p className="text-sm">{comment.text}</p>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  )
-}
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase font-semibold">Email</p>
+                  <p className="font-medium flex items-center justify-between">
+                    {lead.email}
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-function CallsTab({ calls }: { calls: typeof callLogs }) {
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
-  }
-
-  if (calls.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Phone className="h-12 w-12 mx-auto mb-2 opacity-50" />
-        <p>No call logs</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-3 max-h-[500px] overflow-y-auto">
-      {calls.map((call) => (
-        <div key={call.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-          <div className="flex items-center gap-3">
-            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-              call.direction === "outbound" ? "bg-success/10 text-success" : "bg-chart-1/10 text-chart-1"
-            }`}>
-              {call.direction === "outbound" ? (
-                <PhoneOutgoing className="h-5 w-5" />
-              ) : (
-                <PhoneIncoming className="h-5 w-5" />
-              )}
-            </div>
-            <div>
-              <p className="font-medium text-sm">{call.callerTo}</p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{format(new Date(call.createdAt), "MMM dd, hh:mm a")}</span>
-                <span>|</span>
-                <span>{formatDuration(call.duration)}</span>
-              </div>
-            </div>
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <Tag className="h-4 w-4" /> Property Interest
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">Source</p>
+                    <p className="text-sm font-medium">{lead.medium}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">Sub-Status</p>
+                    <p className="text-sm font-medium">
+                      <Badge variant="outline" className="text-xs font-normal">
+                        {lead.subStatus}
+                      </Badge>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={
-              call.status === "answered" ? "text-success border-success" :
-              call.status === "missed" ? "text-destructive border-destructive" :
-              ""
-            }>
-              {call.status === "answered" ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
-              {call.status}
-            </Badge>
-            {call.recordingUrl && (
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Play className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Download className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+
+          <div className="lg:col-span-2 space-y-6">
+            <Tabs defaultValue="timeline" className="w-full">
+              <TabsList className="w-full justify-start border-b bg-transparent h-auto p-0 gap-6 rounded-none">
+                <TabsTrigger value="timeline" className="px-1 py-3 h-auto">
+                  <History className="h-4 w-4 mr-2" /> Timeline
+                </TabsTrigger>
+                <TabsTrigger value="calls" className="px-1 py-3 h-auto">
+                  <Phone className="h-4 w-4 mr-2" /> Call Logs
+                </TabsTrigger>
+                <TabsTrigger value="emails" className="px-1 py-3 h-auto">
+                  <Mail className="h-4 w-4 mr-2" /> Emails
+                </TabsTrigger>
+                <TabsTrigger value="notes" className="px-1 py-3 h-auto">
+                  <FileText className="h-4 w-4 mr-2" /> Notes
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="timeline" className="pt-6 space-y-6">
+                <div className="relative pl-6 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-muted">
+                  {timeline.map((event) => (
+                    <div key={event.id} className="relative">
+                      <div className="absolute -left-[23px] mt-1 h-3 w-3 rounded-full border-2 border-background bg-primary ring-4 ring-background" />
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-sm">{event.title}</p>
+                          <p className="text-xs text-muted-foreground">{format(new Date(event.createdAt), "MMM dd, hh:mm a")}</p>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{event.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="notes" className="pt-6">
+                <div className="space-y-4">
+                  {comments.map((comment) => (
+                    <Card key={comment.id} className="border-0 shadow-sm bg-secondary/30">
+                      <CardContent className="p-4">
+                        <p className="text-sm">{comment.text}</p>
+                        <div className="flex items-center justify-between mt-3">
+                          <p className="text-xs font-semibold text-primary">{comment.createdByName}</p>
+                          <p className="text-xs text-muted-foreground">{format(new Date(comment.createdAt), "MMM dd, hh:mm a")}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
-      ))}
-    </div>
-  )
-}
-
-function EmailsTab({ emails }: { emails: typeof emailLogs }) {
-  if (emails.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Mail className="h-12 w-12 mx-auto mb-2 opacity-50" />
-        <p>No emails sent</p>
       </div>
-    )
-  }
-
-  return (
-    <div className="space-y-3 max-h-[500px] overflow-y-auto">
-      {emails.map((email) => (
-        <div key={email.id} className="p-3 rounded-lg bg-secondary/50">
-          <div className="flex items-start justify-between mb-2">
-            <p className="font-medium text-sm">{email.subject}</p>
-            <Badge variant="outline" className={
-              email.status === "opened" ? "text-success border-success" :
-              email.status === "clicked" ? "text-chart-1 border-chart-1" :
-              email.status === "bounced" ? "text-destructive border-destructive" :
-              ""
-            }>
-              {email.status}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground line-clamp-2">{email.body}</p>
-          <p className="text-xs text-muted-foreground mt-2">
-            {format(new Date(email.createdAt), "MMM dd, yyyy hh:mm a")}
-          </p>
-        </div>
-      ))}
     </div>
   )
 }
 
-function QuickActionForm({ lead, onClose }: { lead: typeof leads[0], onClose: () => void }) {
+function QuickActionForm({ lead, onClose, refreshData }: { lead: Lead, onClose: () => void, refreshData: () => Promise<void> }) {
   const [status, setStatus] = useState<LeadStatus>(lead.status)
   const [subStatus, setSubStatus] = useState<LeadSubStatus>(lead.subStatus)
   const [comment, setComment] = useState("")
   const [followUpDate, setFollowUpDate] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true)
+      const response = await fetch(`/api/leads/${lead.id}/quickaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: lead.id,
+          status,
+          subStatus,
+          comment,
+          followUpDate
+        })
+      })
+      if (!response.ok) throw new Error("Update failed")
+      await refreshData()
+      onClose()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-4 mt-6">
@@ -517,19 +383,18 @@ function QuickActionForm({ lead, onClose }: { lead: typeof leads[0], onClose: ()
       <div className="space-y-2">
         <label className="text-sm font-medium">Comment</label>
         <Textarea 
-          placeholder="Add a comment about this interaction..."
+          placeholder="Add a comment..."
           value={comment}
           onChange={(e) => setComment(e.target.value)}
+          disabled={isSubmitting}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium">Lead Status</label>
-          <Select value={status} onValueChange={(v) => setStatus(v as LeadStatus)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
+          <label className="text-sm font-medium">Status</label>
+          <Select value={status} onValueChange={(v) => setStatus(v as LeadStatus)} disabled={isSubmitting}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="new">New</SelectItem>
               <SelectItem value="contacted">Contacted</SelectItem>
@@ -542,10 +407,8 @@ function QuickActionForm({ lead, onClose }: { lead: typeof leads[0], onClose: ()
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Sub Status</label>
-          <Select value={subStatus} onValueChange={(v) => setSubStatus(v as LeadSubStatus)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
+          <Select value={subStatus} onValueChange={(v) => setSubStatus(v as LeadSubStatus)} disabled={isSubmitting}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="hot">Hot</SelectItem>
               <SelectItem value="warm">Warm</SelectItem>
@@ -561,12 +424,15 @@ function QuickActionForm({ lead, onClose }: { lead: typeof leads[0], onClose: ()
           type="datetime-local"
           value={followUpDate}
           onChange={(e) => setFollowUpDate(e.target.value)}
+          disabled={isSubmitting}
         />
       </div>
 
       <div className="flex gap-2 pt-4">
-        <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-        <Button onClick={onClose} className="flex-1">Save</Button>
+        <Button variant="outline" onClick={onClose} className="flex-1" disabled={isSubmitting}>Cancel</Button>
+        <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
+          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+        </Button>
       </div>
     </div>
   )

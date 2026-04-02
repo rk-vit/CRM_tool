@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Header } from "@/components/crm/header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -22,9 +23,8 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table"
-import { leads, projects } from "@/lib/mock-data"
 import { useAuth } from "@/lib/auth-context"
-import type { LeadStatus } from "@/lib/types"
+import type { Lead, LeadStatus } from "@/lib/types"
 import {
   Search,
   Filter,
@@ -34,7 +34,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Grid,
-  List
+  List,
+  Loader2
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -45,29 +46,67 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { format } from "date-fns"
 
-const statusFilters: { value: LeadStatus | "all"; label: string; count: number }[] = [
-  { value: "all", label: "All Leads", count: 0 },
-  { value: "new", label: "New", count: 0 },
-  { value: "contacted", label: "Contacted", count: 0 },
-  { value: "qualified", label: "Qualified", count: 0 },
-  { value: "negotiation", label: "Negotiation", count: 0 },
-  { value: "won", label: "Won", count: 0 },
-  { value: "lost", label: "Lost", count: 0 }
+const statusFilters: { value: LeadStatus | "all"; label: string }[] = [
+  { value: "all", label: "All Leads" },
+  { value: "new", label: "New" },
+  { value: "contacted", label: "Contacted" },
+  { value: "qualified", label: "Qualified" },
+  { value: "negotiation", label: "Negotiation" },
+  { value: "won", label: "Won" },
+  { value: "lost", label: "Lost" }
 ]
 
 export default function LeadsPage() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const statusParam = searchParams.get("status") as LeadStatus | "all" | null
+  
   const { user } = useAuth()
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [projects, setProjects] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all")
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">(statusParam || "all")
+
+  useEffect(() => {
+    if (statusParam) {
+      setStatusFilter(statusParam)
+    }
+  }, [statusParam])
   const [projectFilter, setProjectFilter] = useState<string>("all")
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
-  const myLeads = leads.filter(l => l.assignedTo === user?.id)
+  useEffect(() => {
+    async function fetchData() {
+      if (!user?.id) return
+      
+      try {
+        setLoading(true)
+        const [leadsRes, projectsRes] = await Promise.all([
+          fetch(`/api/leads?assignedTo=${user.id}`),
+          fetch("/api/projects")
+        ])
+        
+        const leadsData = await leadsRes.json()
+        const projectsData = await projectsRes.json()
+        
+        if (Array.isArray(leadsData)) setLeads(leadsData)
+        if (Array.isArray(projectsData)) setProjects(projectsData)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [user?.id])
 
   const filteredLeads = useMemo(() => {
-    return myLeads.filter((lead) => {
+    return leads.filter((lead) => {
       const matchesSearch = 
         lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.phone.includes(searchQuery) ||
@@ -79,7 +118,7 @@ export default function LeadsPage() {
 
       return matchesSearch && matchesStatus && matchesProject
     })
-  }, [myLeads, searchQuery, statusFilter, projectFilter])
+  }, [leads, searchQuery, statusFilter, projectFilter])
 
   const paginatedLeads = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage
@@ -90,20 +129,20 @@ export default function LeadsPage() {
 
   // Update status counts
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: myLeads.length }
-    myLeads.forEach(lead => {
+    const counts: Record<string, number> = { all: leads.length }
+    leads.forEach(lead => {
       counts[lead.status] = (counts[lead.status] || 0) + 1
     })
     return counts
-  }, [myLeads])
+  }, [leads])
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       new: "bg-chart-1 text-white",
       contacted: "bg-chart-2 text-white",
-      qualified: "bg-success text-success-foreground",
-      negotiation: "bg-warning text-warning-foreground",
-      won: "bg-chart-2 text-white",
+      qualified: "bg-green-600 text-white",
+      negotiation: "bg-orange-500 text-white",
+      won: "bg-emerald-600 text-white",
       lost: "bg-destructive text-destructive-foreground"
     }
     return colors[status] || "bg-secondary text-secondary-foreground"
@@ -112,10 +151,18 @@ export default function LeadsPage() {
   const getSubStatusColor = (subStatus: string) => {
     const colors: Record<string, string> = {
       hot: "bg-destructive/10 text-destructive border-destructive/20",
-      warm: "bg-warning/10 text-warning border-warning/20",
+      warm: "bg-orange-500/10 text-orange-600 border-orange-500/20",
       cold: "bg-chart-1/10 text-chart-1 border-chart-1/20"
     }
     return colors[subStatus] || ""
+  }
+
+  if (loading && leads.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -124,7 +171,19 @@ export default function LeadsPage() {
 
       <div className="flex-1 p-4 md:p-6 space-y-4">
         {/* Status Tabs */}
-        <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as LeadStatus | "all")}>
+        <Tabs 
+          value={statusFilter} 
+          onValueChange={(v) => {
+            setStatusFilter(v as LeadStatus | "all")
+            const params = new URLSearchParams(searchParams.toString())
+            if (v === "all") {
+              params.delete("status")
+            } else {
+              params.set("status", v)
+            }
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+          }}
+        >
           <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-secondary">
             {statusFilters.map((filter) => (
               <TabsTrigger
@@ -203,7 +262,7 @@ export default function LeadsPage() {
                 </TableHeader>
                 <TableBody>
                   {paginatedLeads.map((lead) => (
-                    <TableRow key={lead.id} className="cursor-pointer hover:bg-accent/50">
+                    <TableRow key={lead.id} onClick={() => router.push(`/leads/${lead.id}`)} className="cursor-pointer hover:bg-accent/50">
                       <TableCell className="font-medium text-primary">
                         <Link href={`/leads/${lead.id}`}>{lead.id}</Link>
                       </TableCell>
@@ -213,7 +272,11 @@ export default function LeadsPage() {
                           <p className="text-xs text-muted-foreground md:hidden">{lead.phone}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{lead.phone}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div>
+                          <Link href={`/leads/${lead.id}`} className="font-medium">{lead.phone}</Link>
+                        </div>
+                      </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <Badge variant="outline">{lead.project}</Badge>
                       </TableCell>
@@ -253,6 +316,13 @@ export default function LeadsPage() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {filteredLeads.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                        No leads found matching your criteria.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -289,6 +359,11 @@ export default function LeadsPage() {
                 </Card>
               </Link>
             ))}
+            {filteredLeads.length === 0 && !loading && (
+              <div className="col-span-full text-center py-10 text-muted-foreground">
+                No leads found matching your criteria.
+              </div>
+            )}
           </div>
         )}
 

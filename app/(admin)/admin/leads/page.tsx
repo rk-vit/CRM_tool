@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Header } from "@/components/crm/header"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -22,15 +23,19 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table"
-import { leads, projects, salesExecutives } from "@/lib/mock-data"
-import type { LeadStatus } from "@/lib/types"
+import { useAuth } from "@/lib/auth-context"
+import type { Lead, LeadStatus, SalesExecutive } from "@/lib/types"
 import {
   Search,
   Filter,
-  Eye,
+  Phone,
+  Mail,
   MoreVertical,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  UserPlus,
+  Download,
+  Loader2
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -42,7 +47,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { format } from "date-fns"
 
 const statusFilters: { value: LeadStatus | "all"; label: string }[] = [
-  { value: "all", label: "All" },
+  { value: "all", label: "All Leads" },
   { value: "new", label: "New" },
   { value: "contacted", label: "Contacted" },
   { value: "qualified", label: "Qualified" },
@@ -52,12 +57,53 @@ const statusFilters: { value: LeadStatus | "all"; label: string }[] = [
 ]
 
 export default function AdminLeadsPage() {
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [projects, setProjects] = useState<string[]>([])
+  const [executives, setExecutives] = useState<SalesExecutive[]>([])
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const statusParam = searchParams.get("status") as LeadStatus | "all" | null
+
   const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all")
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">(statusParam || "all")
+
+  useEffect(() => {
+    if (statusParam) {
+      setStatusFilter(statusParam)
+    }
+  }, [statusParam])
   const [projectFilter, setProjectFilter] = useState<string>("all")
-  const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        const [leadsRes, projectsRes, execRes] = await Promise.all([
+          fetch("/api/leads"),
+          fetch("/api/projects"),
+          fetch("/api/admin/users")
+        ])
+        
+        const leadsData = await leadsRes.json()
+        const projectsData = await projectsRes.json()
+        const execData = await execRes.json()
+        
+        setLeads(Array.isArray(leadsData) ? leadsData : [])
+        setProjects(Array.isArray(projectsData) ? projectsData : [])
+        setExecutives(Array.isArray(execData) ? execData : [])
+      } catch (error) {
+        console.error("Error fetching admin leads data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
@@ -69,11 +115,10 @@ export default function AdminLeadsPage() {
       
       const matchesStatus = statusFilter === "all" || lead.status === statusFilter
       const matchesProject = projectFilter === "all" || lead.project === projectFilter
-      const matchesAssignee = assigneeFilter === "all" || lead.assignedTo === assigneeFilter
 
-      return matchesSearch && matchesStatus && matchesProject && matchesAssignee
+      return matchesSearch && matchesStatus && matchesProject
     })
-  }, [searchQuery, statusFilter, projectFilter, assigneeFilter])
+  }, [leads, searchQuery, statusFilter, projectFilter])
 
   const paginatedLeads = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage
@@ -88,27 +133,59 @@ export default function AdminLeadsPage() {
       counts[lead.status] = (counts[lead.status] || 0) + 1
     })
     return counts
-  }, [])
+  }, [leads])
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       new: "bg-chart-1 text-white",
       contacted: "bg-chart-2 text-white",
-      qualified: "bg-success text-success-foreground",
-      negotiation: "bg-warning text-warning-foreground",
-      won: "bg-chart-2 text-white",
+      qualified: "bg-green-600 text-white",
+      negotiation: "bg-orange-500 text-white",
+      won: "bg-emerald-600 text-white",
       lost: "bg-destructive text-destructive-foreground"
     }
     return colors[status] || "bg-secondary text-secondary-foreground"
   }
 
+  if (loading && leads.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="All Leads" subtitle={`${filteredLeads.length} total leads`} />
+      <Header title="All Leads" subtitle={`Managing ${filteredLeads.length} total leads in the system`} />
 
       <div className="flex-1 p-4 md:p-6 space-y-4">
+        {/* Actions Row */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="flex gap-2">
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" /> Add New Lead
+            </Button>
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" /> Export
+            </Button>
+          </div>
+        </div>
+
         {/* Status Tabs */}
-        <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as LeadStatus | "all")}>
+        <Tabs 
+          value={statusFilter} 
+          onValueChange={(v) => {
+            setStatusFilter(v as LeadStatus | "all")
+            const params = new URLSearchParams(searchParams.toString())
+            if (v === "all") {
+              params.delete("status")
+            } else {
+              params.set("status", v)
+            }
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+          }}
+        >
           <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-secondary">
             {statusFilters.map((filter) => (
               <TabsTrigger
@@ -136,9 +213,9 @@ export default function AdminLeadsPage() {
               className="pl-9"
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2">
             <Select value={projectFilter} onValueChange={setProjectFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Project" />
               </SelectTrigger>
@@ -146,17 +223,6 @@ export default function AdminLeadsPage() {
                 <SelectItem value="all">All Projects</SelectItem>
                 {projects.map((project) => (
                   <SelectItem key={project} value={project}>{project}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Assignee" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Assignees</SelectItem>
-                {salesExecutives.map((exec) => (
-                  <SelectItem key={exec.id} value={exec.id}>{exec.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -170,10 +236,9 @@ export default function AdminLeadsPage() {
               <TableHeader>
                 <TableRow className="bg-secondary/50">
                   <TableHead className="w-[100px]">ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Phone</TableHead>
-                  <TableHead className="hidden lg:table-cell">Project</TableHead>
-                  <TableHead className="hidden md:table-cell">Assigned To</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Assigned To</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden lg:table-cell">Created</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
@@ -181,24 +246,30 @@ export default function AdminLeadsPage() {
               </TableHeader>
               <TableBody>
                 {paginatedLeads.map((lead) => (
-                  <TableRow key={lead.id} className="hover:bg-accent/50">
+                  <TableRow key={lead.id} className="cursor-pointer hover:bg-accent/50">
                     <TableCell className="font-medium text-primary">
                       <Link href={`/admin/leads/${lead.id}`}>{lead.id}</Link>
                     </TableCell>
                     <TableCell>
                       <div>
                         <p className="font-medium">{lead.name}</p>
-                        <p className="text-xs text-muted-foreground md:hidden">{lead.phone}</p>
+                        <p className="text-xs text-muted-foreground">{lead.phone}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{lead.phone}</TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell>
                       <Badge variant="outline">{lead.project}</Badge>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{lead.assignedToName}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
+                          {(lead.assignedToName || "U").split(" ").map(n => n[0]).join("")}
+                        </div>
+                        <span className="text-sm">{lead.assignedToName || "Unassigned"}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(lead.status)}>
-                        {lead.status.replace("_", " ")}
+                        {lead.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
@@ -213,17 +284,22 @@ export default function AdminLeadsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link href={`/admin/leads/${lead.id}`}>
-                              <Eye className="h-4 w-4 mr-2" /> View Details
-                            </Link>
+                            <Link href={`/admin/leads/${lead.id}`}>Edit Details</Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem>Reassign Lead</DropdownMenuItem>
-                          <DropdownMenuItem>View Timeline</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive">Delete Lead</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredLeads.length === 0 && !loading && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                      No leads found matching your criteria.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
