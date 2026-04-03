@@ -42,6 +42,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { FloatingCallWidget } from "../../call_widget/call_widget"
 
 export default function LeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -59,6 +60,9 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [openConfirm, setOpenConfirm] = useState(false)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [showCallInterface, setShowCallInterface] = useState(false);
 
   const fetchLeadDetails = async () => {
     try {
@@ -133,23 +137,30 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
           </Button>
           
           <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isCalling}>
-                  {isCalling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Phone className="h-4 w-4 mr-2" />}
-                  Call <ChevronDown className="h-3 w-3 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExotelCall} className="cursor-pointer font-medium text-primary">
-                  <PhoneCall className="h-4 w-4 mr-2" /> Call Now
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer text-muted-foreground">
-                  Cancel
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
+          <Button
+                variant="outline"
+                size="sm"
+                disabled={isCalling}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedLead(lead)
+                  setOpenConfirm(true)
+                }}
+              >
+                {isCalling ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Phone className="h-4 w-4 mr-2" />
+                )}
+                Call
+            </Button>
+            {showCallInterface && selectedLead && (
+                        <FloatingCallWidget
+                          contactName={selectedLead.name}
+                          contactPhone={selectedLead.phone}
+                          onClose={() => setShowCallInterface(false)}
+                        />
+                      )}
             <Sheet open={emailSheetOpen} onOpenChange={setEmailSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm" className="hidden sm:flex">
@@ -338,6 +349,50 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       </div>
+      {openConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-xl w-[400px] shadow-lg">
+              <h2 className="text-lg font-semibold mb-3">Confirm Call</h2>
+
+              <p className="text-sm text-gray-600 mb-5">
+                You are calling the lead. You will receive a call on your mobile.
+                Please attend it and wait for it to connect to the lead.
+                <br /><br />
+                Are you sure you want to make the call?
+              </p>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setOpenConfirm(false)}
+                  className="px-4 py-2 rounded bg-gray-200"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={async () => {
+                    setOpenConfirm(false)
+
+                    // 🔥 1. show widget
+                    setShowCallInterface(true)
+
+                    // 🔥 2. call API
+                    await fetch('/api/call', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        phone: selectedLead?.phone
+                      })
+                    })
+                  }}
+                  className="px-4 py-2 rounded bg-green-600 text-white"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   )
 }
