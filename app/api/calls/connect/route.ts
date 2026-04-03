@@ -98,6 +98,10 @@ export async function POST(request: Request) {
     formData.append("To", toNumber);
     formData.append("CallerId", cleanCallerId);
     formData.append("CallType", "trans");
+    formData.append("Record", "true");
+    formData.append("StatusCallback", "https://crm-web-hooks.vercel.app/api/webhooks/exotel");
+    formData.append("StatusCallbackContentType", "application/json");
+    formData.append("StatusCallbackEvents[0]", "terminal");
 
     // HTTP Basic Auth header
     const authHeader = "Basic " + Buffer.from(`${apiKey}:${apiToken}`).toString("base64");
@@ -137,10 +141,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7. Insert into call_logs
+    // 7. Insert into call_logs (with exotel_call_sid for webhook matching)
     await sql`
-      INSERT INTO call_logs (lead_id, caller_number, caller_to, duration, direction, status, recording_url, assigned_to)
-      VALUES (${leadId}, ${agentPhone}, ${leadPhone}, 0, 'outbound', 'no_answer', ${null}, ${agentId})
+      INSERT INTO call_logs (lead_id, caller_number, caller_to, duration, direction, status, recording_url, assigned_to, exotel_call_sid)
+      VALUES (${leadId}, ${agentPhone}, ${leadPhone}, 0, 'outbound', 'no_answer', ${null}, ${agentId}, ${callSid})
     `;
 
     // 8. Insert timeline event
