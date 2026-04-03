@@ -262,7 +262,7 @@ export default function LeadsPage() {
                 </TableHeader>
                 <TableBody>
                   {paginatedLeads.map((lead) => (
-                    <TableRow key={lead.id} className="cursor-pointer hover:bg-accent/50">
+                    <TableRow key={lead.id} onClick={() => router.push(`/leads/${lead.id}`)} className="cursor-pointer hover:bg-accent/50">
                       <TableCell className="font-medium text-primary">
                         <Link href={`/leads/${lead.id}`}>{lead.id}</Link>
                       </TableCell>
@@ -272,7 +272,11 @@ export default function LeadsPage() {
                           <p className="text-xs text-muted-foreground md:hidden">{lead.phone}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{lead.phone}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div>
+                          <Link href={`/leads/${lead.id}`} className="font-medium">{lead.phone}</Link>
+                        </div>
+                      </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <Badge variant="outline">{lead.project}</Badge>
                       </TableCell>
