@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
+import { useAuth } from "@/lib/auth-context"
 import {
   Phone,
   Mail,
@@ -75,25 +76,6 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
     }
   }
 
-  const handleExotelCall = async () => {
-    try {
-      setIsCalling(true)
-      const response = await fetch('/api/calls/exotel-initiate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          leadId: lead.id,
-          to: lead.phone 
-        })
-      })
-      if (!response.ok) throw new Error("Call failed to initiate")
-      console.log("Call initiated via Exotel")
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsCalling(false)
-    }
-  }
 
   useEffect(() => {
     fetchLeadDetails()
@@ -141,7 +123,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleExotelCall} className="cursor-pointer font-medium text-primary">
+                <DropdownMenuItem className="cursor-pointer font-medium text-primary">
                   <PhoneCall className="h-4 w-4 mr-2" /> Call Now
                 </DropdownMenuItem>
                 <DropdownMenuItem className="cursor-pointer text-muted-foreground">

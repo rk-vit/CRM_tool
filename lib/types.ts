@@ -13,7 +13,7 @@ export interface User {
 
 export type LeadStatus = "new" | "contacted" | "qualified" | "negotiation" | "won" | "lost"
 export type LeadSubStatus = "hot" | "warm" | "cold"
-export type LeadSource = "website" | "google_ads" | "facebook" | "referral" | "direct" | "99acres" | "magicbricks"
+export type LeadSource = "website" | "google_ads" | "facebook" | "referral" | "direct" | "99acres" | "magicbricks" | "housing"
 
 export interface Lead {
   id: string
