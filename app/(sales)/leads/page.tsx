@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { format } from "date-fns"
+import { FloatingCallWidget } from "../call_widget/call_widget"
 
 const statusFilters: { value: LeadStatus | "all"; label: string }[] = [
   { value: "all", label: "All Leads" },
@@ -68,6 +69,8 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">(statusParam || "all")
+  const [openConfirm, setOpenConfirm] = useState(false)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
 
   useEffect(() => {
     if (statusParam) {
@@ -77,6 +80,8 @@ export default function LeadsPage() {
   const [projectFilter, setProjectFilter] = useState<string>("all")
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [currentPage, setCurrentPage] = useState(1)
+  const [showCallInterface, setShowCallInterface] = useState(false);
+  
   const itemsPerPage = 10
 
   useEffect(() => {
@@ -262,7 +267,7 @@ export default function LeadsPage() {
                 </TableHeader>
                 <TableBody>
                   {paginatedLeads.map((lead) => (
-                    <TableRow key={lead.id} className="cursor-pointer hover:bg-accent/50">
+                    <TableRow key={lead.id} onClick={() => router.push(`/leads/${lead.id}`)} className="cursor-pointer hover:bg-accent/50">
                       <TableCell className="font-medium text-primary">
                         <Link href={`/leads/${lead.id}`}>{lead.id}</Link>
                       </TableCell>
@@ -272,7 +277,11 @@ export default function LeadsPage() {
                           <p className="text-xs text-muted-foreground md:hidden">{lead.phone}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{lead.phone}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div>
+                          <Link href={`/leads/${lead.id}`} className="font-medium">{lead.phone}</Link>
+                        </div>
+                      </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <Badge variant="outline">{lead.project}</Badge>
                       </TableCell>
@@ -301,9 +310,16 @@ export default function LeadsPage() {
                             <DropdownMenuItem asChild>
                               <Link href={`/leads/${lead.id}`}>View Details</Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Phone className="h-4 w-4 mr-2" /> Call
-                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation() // 🔥 VERY IMPORTANT
+                                  setSelectedLead(lead) // store current row lead
+                                  e.preventDefault() 
+                                  setOpenConfirm(true)
+                                }}
+                              >
+                                Call Now
+                              </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Mail className="h-4 w-4 mr-2" /> Email
                             </DropdownMenuItem>
@@ -363,6 +379,13 @@ export default function LeadsPage() {
           </div>
         )}
 
+        {showCallInterface && selectedLead && (
+            <FloatingCallWidget
+              contactName={selectedLead.name}
+              contactPhone={selectedLead.phone}
+              onClose={() => setShowCallInterface(false)}
+            />
+          )}
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between pt-4">
@@ -393,6 +416,51 @@ export default function LeadsPage() {
           </div>
         )}
       </div>
+      {openConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-xl w-[400px] shadow-lg">
+              <h2 className="text-lg font-semibold mb-3">Confirm Call</h2>
+
+              <p className="text-sm text-gray-600 mb-5">
+                You are calling the lead. You will receive a call on your mobile.
+                Please attend it and wait for it to connect to the lead.
+                <br /><br />
+                Are you sure you want to make the call?
+              </p>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setOpenConfirm(false)}
+                  className="px-4 py-2 rounded bg-gray-200"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={async () => {
+                    setOpenConfirm(false)
+
+                    // 🔥 1. show widget
+                    setShowCallInterface(true)
+
+                    // 🔥 2. call API
+                    await fetch('/api/call', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        phone: selectedLead?.phone
+                      })
+                    })
+                  }}
+                  className="px-4 py-2 rounded bg-green-600 text-white"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
+
   )
 }
