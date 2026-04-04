@@ -229,7 +229,7 @@ export default function SalesDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myLeads.filter(l => l.followUpDate).slice(0, 3).map((lead) => (
+              {myLeads.filter(l => l.followUpDate).slice(0, 6).map((lead) => (
                 <Link
                   href={`/leads/${lead.id}`}
                   key={lead.id}
