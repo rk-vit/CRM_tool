@@ -354,7 +354,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase font-semibold">Source</p>
-                    <p className="text-sm font-medium">{lead.medium}</p>
+                    <p className="text-sm font-medium">{lead.source}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase font-semibold">Sub-Status</p>
