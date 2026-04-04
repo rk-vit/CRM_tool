@@ -155,7 +155,7 @@ export default function SalesDashboard() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
-              {myLeads.slice(0, 5).map((lead) => (
+              {myLeads.slice(0, 7).map((lead) => (
                 <Link
                   key={lead.id}
                   href={`/leads/${lead.id}`}
