@@ -227,7 +227,11 @@ export default function AdminDashboard() {
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium">{event.title}</p>
                         <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal text-muted-foreground">
+<<<<<<< HEAD
+                        {event.leadId}
+=======
                           {event.leadId}
+>>>>>>> 9234f36be9500f55cb816b3fd2e219a39e804997
                         </Badge>
                         <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded text-muted-foreground">
                           {event.type}

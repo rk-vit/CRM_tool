@@ -93,7 +93,7 @@ export default function LoginPage() {
                 <Building2 className="h-6 w-6" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">PropCRM</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">SriRam's CRM<br/><span className="text-sm text-slate-500 dark:text-slate-400">by Axion</span></h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2">Real Estate Lead Management</p>
         </div>
 
@@ -168,9 +168,6 @@ export default function LoginPage() {
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-slate-200 dark:border-slate-800"></span>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white dark:bg-slate-900 px-3 text-slate-500 font-medium">Quick Access Demo</span>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -194,7 +191,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-8">
-          &copy; 2026 PropCRM Portal. All rights reserved. Secure 256-bit SSL encrypted.
+          &copy; 2026 SriRam's CRM Portal by Axion Technologies. All rights reserved. 
         </p>
       </div>
     </div>

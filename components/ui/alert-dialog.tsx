@@ -44,7 +44,7 @@ function AlertDialogOverlay({
   )
 }
 
-function AlertDialogContent({
+function Alert  ({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {

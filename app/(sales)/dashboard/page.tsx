@@ -86,7 +86,7 @@ export default function SalesDashboard() {
       
       <div className="flex-1 p-4 md:p-6 space-y-6">
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 sm:grid-cols-1 gap-4">
           <StatsCard
             title="New Leads"
             value={stats?.newLeads || 0}
@@ -114,7 +114,7 @@ export default function SalesDashboard() {
         </div>
 
         {/* Second Row Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 sm:grid-cols-1 gap-4">
           <StatsCard
             title="Re-Engaged"
             value={stats?.reEngaged || 0}
@@ -143,9 +143,9 @@ export default function SalesDashboard() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-6 sm:grid-cols-1">
           {/* Recent Leads */}
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm sm:overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-semibold">My Recent Leads</CardTitle>
               <Button variant="ghost" size="sm" asChild>
@@ -164,7 +164,9 @@ export default function SalesDashboard() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm truncate">{lead.name}</p>
-                      <Badge variant="outline" className="text-xs">{lead.id}</Badge>
+                      <Badge variant="outline" className="font-normal sm:text-[10px] text-xs h-4 px-1.5 text-muted-foreground">
+                        {lead.id}
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{lead.project}</p>
                   </div>
