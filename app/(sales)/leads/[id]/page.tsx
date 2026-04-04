@@ -9,7 +9,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { useAuth } from "@/lib/auth-context"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
   Phone,
+  PhoneCall,
+  PhoneOff,
   Mail,
   Calendar,
   User,
@@ -20,10 +30,12 @@ import {
   Loader2,
   ExternalLink,
   ArrowLeft, 
+  Plus,
+  Minimize2,
+  Maximize2,
   Zap,
   ChevronDown,
-  Send,
-  PhoneCall
+  Send
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -47,10 +59,108 @@ import {
 export default function LeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [quickActionOpen, setQuickActionOpen] = useState(false)
+  const [callConfirmOpen, setCallConfirmOpen] = useState(false)
+  const [isCalling, setIsCalling] = useState(false)
+  const [callDuration, setCallDuration] = useState(0)
+  const [callLoading, setCallLoading] = useState(false)
+  const [callError, setCallError] = useState<string | null>(null)
+  const [callMinimized, setCallMinimized] = useState(false)
+  const [callSid, setCallSid] = useState<string | null>(null)
+  const [callResult, setCallResult] = useState<string | null>(null)
+
+  // Timer for the calling screen
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (isCalling) {
+      interval = setInterval(() => {
+        setCallDuration((prev) => prev + 1)
+      }, 1000)
+    } else {
+      setCallDuration(0)
+    }
+    return () => clearInterval(interval)
+  }, [isCalling])
+
+  // Poll Exotel callback for call status — auto-end when call completes
+  useEffect(() => {
+    if (!isCalling || !callSid) return
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/calls/status?callSid=${callSid}`)
+        if (!res.ok) return
+        const data = await res.json()
+
+        if (data.ended) {
+          // Call has ended — auto-dismiss widget
+          clearInterval(pollInterval)
+          setIsCalling(false)
+          setCallResult(
+            data.status === "answered"
+              ? `Call completed — ${Math.floor(data.duration / 60)}m ${data.duration % 60}s`
+              : data.status === "busy"
+              ? "Lead was busy"
+              : "Call was not answered"
+          )
+          // Clear result after 5 seconds
+          setTimeout(() => setCallResult(null), 5000)
+          fetchLeadDetails()
+        }
+      } catch (err) {
+        console.error("Poll error:", err)
+      }
+    }, 5000)
+
+    return () => clearInterval(pollInterval)
+  }, [isCalling, callSid])
+
+  const handleCallClick = () => {
+    setCallError(null)
+    setCallConfirmOpen(true)
+  }
+
+  const handleConfirmCall = async () => {
+    setCallLoading(true)
+    setCallError(null)
+
+    try {
+      const res = await fetch("/api/calls/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId: lead.id }),
+      })
+
+      const result = await res.json()
+
+      if (!res.ok) {
+        throw new Error(result.error || "Failed to initiate call")
+      }
+
+      setCallSid(result.callSid || null)
+      setCallConfirmOpen(false)
+      setIsCalling(true)
+    } catch (err: any) {
+      setCallError(err.message || "Something went wrong. Please try again.")
+    } finally {
+      setCallLoading(false)
+    }
+  }
+
+  const handleEndCall = () => {
+    setIsCalling(false)
+    setCallSid(null)
+    // Refresh data to show the new call log and timeline entry
+    fetchLeadDetails()
+  }
+
+  const formatCallDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, "0")
+    const secs = (seconds % 60).toString().padStart(2, "0")
+    return `${mins}:${secs}`
+  }
   const [emailSheetOpen, setEmailSheetOpen] = useState(false)
   const [emailSubject, setEmailSubject] = useState("")
   const [emailContent, setEmailContent] = useState("")
-  const [isCalling, setIsCalling] = useState(false)
   const [data, setData] = useState<{
     lead: Lead;
     timeline: TimelineEvent[];
@@ -60,6 +170,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
 
   const fetchLeadDetails = async () => {
     try {
@@ -76,6 +187,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
     }
   }
 
+  
 
   useEffect(() => {
     fetchLeadDetails()
@@ -115,23 +227,13 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
           </Button>
           
           <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" disabled={isCalling}>
-                  {isCalling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Phone className="h-4 w-4 mr-2" />}
-                  Call <ChevronDown className="h-3 w-3 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="cursor-pointer font-medium text-primary">
-                  <PhoneCall className="h-4 w-4 mr-2" /> Call Now
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer text-muted-foreground">
-                  Cancel
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
+            <Button variant="outline" size="sm" onClick={handleCallClick}>
+              <Phone className="h-4 w-4 mr-2" /> Call
+            </Button>
+            <Button variant="outline" size="sm" className="hidden sm:flex">
+              <Mail className="h-4 w-4 mr-2" /> Email
+            </Button>
+           
             <Sheet open={emailSheetOpen} onOpenChange={setEmailSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm" className="hidden sm:flex">
@@ -198,7 +300,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
             <Card className="border-0 shadow-sm bg-primary text-primary-foreground">
               <CardContent className="p-6">
                 <div className="grid grid-cols-2 gap-3">
-                  <Button variant="secondary" className="w-full" onClick={handleExotelCall}>
+                  <Button variant="secondary" className="w-full" onClick={handleCallClick}>
                     <Phone className="h-4 w-4 mr-2" /> Call
                   </Button>
                   <Button variant="secondary" className="w-full" onClick={() => setEmailSheetOpen(true)}>
@@ -301,6 +403,80 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                 </div>
               </TabsContent>
 
+              {/* Calls Content */}
+              <TabsContent value="calls" className="pt-6">
+                <div className="space-y-4">
+                  {calls.map((call) => (
+                    <Card key={call.id} className="border-0 shadow-sm bg-secondary/30">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${call.direction === "inbound" ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
+                            }`}>
+                            <Phone className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">
+                              {call.direction === "inbound" ? "Incoming Call" : "Outgoing Call"}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{format(new Date(call.createdAt), "MMM dd, hh:mm a")}</span>
+                              <span>•</span>
+                              <span>{Math.floor(call.duration / 60)}m {call.duration % 60}s</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant={call.status === "answered" ? "default" : "destructive"}>
+                            {call.status}
+                          </Badge>
+                          {call.recordingUrl && (
+                            <audio 
+                              controls 
+                              src={`/api/calls/recording?url=${encodeURIComponent(call.recordingUrl)}`} 
+                              className="h-8 max-w-[200px]" 
+                              title="Listen to call recording"
+                            />
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {calls.length === 0 && (
+                    <div className="text-center py-10 text-muted-foreground bg-secondary/20 rounded-lg">
+                      No call logs found.
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Emails Content */}
+              <TabsContent value="emails" className="pt-6">
+                <div className="space-y-4">
+                  {emails.map((email) => (
+                    <Card key={email.id} className="border-0 shadow-sm">
+                      <CardHeader className="p-4 pb-2">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-sm">{email.subject}</p>
+                          <Badge variant="outline" className="text-[10px]">{email.status}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">To: {email.to}</p>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <p className="text-sm text-muted-foreground line-clamp-2 italic">{email.body}</p>
+                        <p className="text-[10px] text-muted-foreground mt-3 uppercase">
+                          Sent on {format(new Date(email.createdAt), "MMMM dd, yyyy 'at' hh:mm a")}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {emails.length === 0 && (
+                    <div className="text-center py-10 text-muted-foreground bg-secondary/20 rounded-lg">
+                      No emails sent yet.
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
               <TabsContent value="notes" className="pt-6">
                 <div className="space-y-4">
                   {comments.map((comment) => (
@@ -320,6 +496,131 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       </div>
+
+      {/* Call Confirmation Dialog */}
+      <Dialog open={callConfirmOpen} onOpenChange={setCallConfirmOpen}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Phone className="h-5 w-5 text-green-600" />
+              </div>
+              Confirm Call
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to call <span className="font-semibold text-foreground">{lead.name}</span> at{" "}
+              <span className="font-semibold text-foreground">{lead.phone}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          {callError && (
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+              <p className="text-sm text-red-600 dark:text-red-400">{callError}</p>
+            </div>
+          )}
+          <DialogFooter className="pt-4 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCallConfirmOpen(false)} disabled={callLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmCall} className="bg-green-600 hover:bg-green-700 text-white" disabled={callLoading}>
+              {callLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting...
+                </>
+              ) : (
+                <>
+                  <PhoneCall className="h-4 w-4 mr-2" /> Yes, Call Now
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Calling Widget — Bottom-right pop-up */}
+      {isCalling && (
+        callMinimized ? (
+          /* Minimized: small floating pill */
+          <button
+            onClick={() => setCallMinimized(false)}
+            className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-4 py-3 rounded-full bg-slate-900 border border-slate-700 shadow-2xl shadow-black/40 hover:shadow-black/60 transition-all duration-300 hover:scale-105 group cursor-pointer"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-green-500/30 animate-ping" style={{ animationDuration: '2s' }} />
+              <div className="relative h-8 w-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
+                <Phone className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-medium">{lead.name.split(' ')[0]}</span>
+              <span className="text-green-400 font-mono text-sm">{formatCallDuration(callDuration)}</span>
+            </div>
+            <Maximize2 className="h-4 w-4 text-slate-400 group-hover:text-white transition-colors" />
+          </button>
+        ) : (
+          /* Expanded: pop-up card */
+          <div className="fixed bottom-6 right-6 z-[100] w-[320px] rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-slate-700/50" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)' }}>
+            {/* Header bar with minimize */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/50">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-green-400 text-xs font-semibold tracking-widest uppercase">On Call</span>
+              </div>
+              <button
+                onClick={() => setCallMinimized(true)}
+                className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all"
+              >
+                <Minimize2 className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Call content */}
+            <div className="px-6 py-5 flex flex-col items-center gap-4">
+              {/* Avatar with pulse */}
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping" style={{ animationDuration: '2s' }} />
+                <div className="absolute -inset-2 rounded-full border border-green-500/15 animate-pulse" style={{ animationDuration: '2s' }} />
+                <div className="relative h-16 w-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20">
+                  <span className="text-xl font-bold text-white">
+                    {lead.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Lead info */}
+              <div className="text-center space-y-0.5">
+                <p className="text-white font-semibold text-base">{lead.name}</p>
+                <p className="text-slate-400 text-xs font-mono">{lead.phone}</p>
+              </div>
+
+              {/* Timer */}
+              <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10">
+                <p className="text-white font-mono text-sm tracking-widest">{formatCallDuration(callDuration)}</p>
+              </div>
+            </div>
+
+            {/* End call footer */}
+            <div className="px-6 pb-5 flex justify-center">
+              <button
+                onClick={handleEndCall}
+                className="group flex items-center gap-2 px-6 py-2.5 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-200 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95"
+              >
+                <PhoneOff className="h-4 w-4 text-white transition-transform group-hover:rotate-[135deg] duration-300" />
+                <span className="text-white text-sm font-medium">End Call</span>
+              </button>
+            </div>
+          </div>
+        )
+      )}
+
+      {/* Call Result Toast — shown when auto-ended by webhook */}
+      {callResult && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl shadow-black/40">
+            <div className={`h-3 w-3 rounded-full ${callResult?.startsWith("Call completed") ? "bg-green-400" : "bg-amber-400"}`} />
+            <span className="text-white text-sm font-medium">{callResult}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

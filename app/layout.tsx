@@ -5,6 +5,9 @@ import { SessionProvider } from "next-auth/react";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css";
+import { FloatingCallWidget } from "@/app/(sales)/call_widget/call_widget"
+import { useCall } from "@/lib/call-context"
+
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -30,6 +33,20 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
 };
+
+function GlobalCallUI() {
+  const { callState, setCallState } = useCall()
+
+  if (!callState.isOpen || !callState.lead) return null
+
+  return (
+    <FloatingCallWidget
+      contactName={callState.lead.name}
+      contactPhone={callState.lead.phone}
+      onClose={() => setCallState({ isOpen: false, lead: null })}
+    />
+  )
+}
 
 export default function RootLayout({
   children,
