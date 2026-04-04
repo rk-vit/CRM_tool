@@ -93,12 +93,14 @@ export default function SalesDashboard() {
             icon={UserPlus}
             variant="primary"
           />
-          <StatsCard
-            title="Today Follow-up"
-            value={stats?.todayFollowUp || 0}
-            icon={Calendar}
-            variant="warning"
-          />
+          <Link href="#follow-ups" className="block outline-none">
+            <StatsCard
+              title="Today Follow-up"
+              value={stats?.todayFollowUp || 0}
+              icon={Calendar}
+              variant="warning"
+            />
+          </Link>
           <StatsCard
             title="Missed Follow-up"
             value={stats?.missedFollowUp || 0}
@@ -200,7 +202,11 @@ export default function SalesDashboard() {
                       )}
                     </div>
                     <div className="flex-1 pb-4">
+
                       <p className="text-sm font-medium">{event.title}</p>
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal text-muted-foreground">
+                        {event.leadId}
+                      </Badge>
                       <p className="text-xs text-muted-foreground line-clamp-1">
                         {event.description}
                       </p>
@@ -219,14 +225,14 @@ export default function SalesDashboard() {
         </div>
         
 
-        {/* Today's Schedule */}
-        <Card className="border-0 shadow-sm">
+        {/* Today's Schedule - Target for scroll */}
+        <Card id="follow-ups" className="border-0 shadow-sm scroll-mt-20">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold">Today&apos;s Follow-ups</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myLeads.filter(l => l.followUpDate).slice(0, 3).map((lead) => (
+              {myLeads.filter(l => l.followUpDate).slice(0, 6).map((lead) => (
                 <Link
                   href={`/leads/${lead.id}`}
                   key={lead.id}
@@ -237,17 +243,7 @@ export default function SalesDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{lead.name}</p>
-                    {/*Don't show phone number as of now
-                    <p className="text-xs text-muted-foreground">{lead.phone}</p>
-                    */}
                   </div>
-                  {/*Don't show call button as of now
-                  <Button size="sm" variant="outline" asChild>
-                    <Link href={`tel:${lead.phone}`}>
-                      <Phone className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  */}
                 </Link>
               ))}
               {myLeads.filter(l => l.followUpDate).length === 0 && (
