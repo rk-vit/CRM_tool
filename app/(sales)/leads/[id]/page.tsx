@@ -1,19 +1,13 @@
-"use client";
+"use client"
 
-import { useState, useEffect, use } from "react";
-import { Header } from "@/components/crm/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Sheet,
-  SheetTrigger,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+import { useState, useEffect, use } from "react"
+import { Header } from "@/components/crm/header"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
+import { useAuth } from "@/lib/auth-context"
 import {
   Dialog,
   DialogContent,
@@ -68,21 +62,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
 
-export default function LeadDetailsPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const [quickActionOpen, setQuickActionOpen] = useState(false);
-  const [callConfirmOpen, setCallConfirmOpen] = useState(false);
-  const [isCalling, setIsCalling] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [callLoading, setCallLoading] = useState(false);
-  const [callError, setCallError] = useState<string | null>(null);
-  const [callMinimized, setCallMinimized] = useState(false);
+export default function LeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  const [quickActionOpen, setQuickActionOpen] = useState(false)
+  const [callConfirmOpen, setCallConfirmOpen] = useState(false)
+  const [isCalling, setIsCalling] = useState(false)
+  const [callDuration, setCallDuration] = useState(0)
+  const [callLoading, setCallLoading] = useState(false)
+  const [callError, setCallError] = useState<string | null>(null)
+  const [callMinimized, setCallMinimized] = useState(false)
+  const [callSid, setCallSid] = useState<string | null>(null)
+  const [callResult, setCallResult] = useState<string | null>(null)
 
   // Timer for the calling screen
   useEffect(() => {
@@ -96,6 +88,39 @@ export default function LeadDetailsPage({
     }
     return () => clearInterval(interval);
   }, [isCalling]);
+
+  // Poll Exotel callback for call status — auto-end when call completes
+  useEffect(() => {
+    if (!isCalling || !callSid) return
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/calls/status?callSid=${callSid}`)
+        if (!res.ok) return
+        const data = await res.json()
+
+        if (data.ended) {
+          // Call has ended — auto-dismiss widget
+          clearInterval(pollInterval)
+          setIsCalling(false)
+          setCallResult(
+            data.status === "answered"
+              ? `Call completed — ${Math.floor(data.duration / 60)}m ${data.duration % 60}s`
+              : data.status === "busy"
+              ? "Lead was busy"
+              : "Call was not answered"
+          )
+          // Clear result after 5 seconds
+          setTimeout(() => setCallResult(null), 5000)
+          fetchLeadDetails()
+        }
+      } catch (err) {
+        console.error("Poll error:", err)
+      }
+    }, 5000)
+
+    return () => clearInterval(pollInterval)
+  }, [isCalling, callSid])
 
   const handleCallClick = () => {
     setCallError(null);
@@ -119,8 +144,9 @@ export default function LeadDetailsPage({
         throw new Error(result.error || "Failed to initiate call");
       }
 
-      setCallConfirmOpen(false);
-      setIsCalling(true);
+      setCallSid(result.callSid || null)
+      setCallConfirmOpen(false)
+      setIsCalling(true)
     } catch (err: any) {
       setCallError(err.message || "Something went wrong. Please try again.");
     } finally {
@@ -129,7 +155,8 @@ export default function LeadDetailsPage({
   };
 
   const handleEndCall = () => {
-    setIsCalling(false);
+    setIsCalling(false)
+    setCallSid(null)
     // Refresh data to show the new call log and timeline entry
     fetchLeadDetails();
   };
@@ -400,10 +427,8 @@ export default function LeadDetailsPage({
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-semibold">
-                      Source
-                    </p>
-                    <p className="text-sm font-medium">{lead.medium}</p>
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">Source</p>
+                    <p className="text-sm font-medium">{lead.source}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase font-semibold">
@@ -458,6 +483,80 @@ export default function LeadDetailsPage({
                       </div>
                     </div>
                   ))}
+                </div>
+              </TabsContent>
+
+              {/* Calls Content */}
+              <TabsContent value="calls" className="pt-6">
+                <div className="space-y-4">
+                  {calls.map((call) => (
+                    <Card key={call.id} className="border-0 shadow-sm bg-secondary/30">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${call.direction === "inbound" ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
+                            }`}>
+                            <Phone className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">
+                              {call.direction === "inbound" ? "Incoming Call" : "Outgoing Call"}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{format(new Date(call.createdAt), "MMM dd, hh:mm a")}</span>
+                              <span>•</span>
+                              <span>{Math.floor(call.duration / 60)}m {call.duration % 60}s</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant={call.status === "answered" ? "default" : "destructive"}>
+                            {call.status}
+                          </Badge>
+                          {call.recordingUrl && (
+                            <audio 
+                              controls 
+                              src={`/api/calls/recording?url=${encodeURIComponent(call.recordingUrl)}`} 
+                              className="h-8 max-w-[200px]" 
+                              title="Listen to call recording"
+                            />
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {calls.length === 0 && (
+                    <div className="text-center py-10 text-muted-foreground bg-secondary/20 rounded-lg">
+                      No call logs found.
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Emails Content */}
+              <TabsContent value="emails" className="pt-6">
+                <div className="space-y-4">
+                  {emails.map((email) => (
+                    <Card key={email.id} className="border-0 shadow-sm">
+                      <CardHeader className="p-4 pb-2">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-sm">{email.subject}</p>
+                          <Badge variant="outline" className="text-[10px]">{email.status}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">To: {email.to}</p>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <p className="text-sm text-muted-foreground line-clamp-2 italic">{email.body}</p>
+                        <p className="text-[10px] text-muted-foreground mt-3 uppercase">
+                          Sent on {format(new Date(email.createdAt), "MMMM dd, yyyy 'at' hh:mm a")}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {emails.length === 0 && (
+                    <div className="text-center py-10 text-muted-foreground bg-secondary/20 rounded-lg">
+                      No emails sent yet.
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
@@ -647,7 +746,18 @@ export default function LeadDetailsPage({
               </button>
             </div>
           </div>
-        ))}
+        )
+      )}
+
+      {/* Call Result Toast — shown when auto-ended by webhook */}
+      {callResult && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl shadow-black/40">
+            <div className={`h-3 w-3 rounded-full ${callResult?.startsWith("Call completed") ? "bg-green-400" : "bg-amber-400"}`} />
+            <span className="text-white text-sm font-medium">{callResult}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -776,6 +886,5 @@ function QuickActionForm({
         </Button>
       </div>
     </div>
-  );
+  )
 }
-

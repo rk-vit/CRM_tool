@@ -180,41 +180,6 @@ export default function SalesDashboard() {
           </Card>
 
           <Card className="border-0 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              {/* <CardTitle className="text-lg font-semibold"></CardTitle>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/leads" className="text-primary">
-                  View All <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button> */}
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {myLeads.slice(5, 11).map((lead) => (
-                <Link
-                  key={lead.id}
-                  href={`/leads/${lead.id}`}
-                  className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm truncate">{lead.name}</p>
-                      <Badge variant="outline" className="text-xs">{lead.id}</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">{lead.project}</p>
-                  </div>
-                  <Badge className={getStatusColor(lead.status)}>
-                    {lead.status.replace("_", " ")}
-                  </Badge>
-                </Link>
-              ))}
-              {myLeads.length === 0 && (
-                <p className="text-center py-4 text-sm text-muted-foreground">No recent leads found.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Don't show recent activity as of now, can be added later when timeline events are more consistent 
-          <Card className="border-0 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
@@ -251,7 +216,6 @@ export default function SalesDashboard() {
               </div>
             </CardContent>
           </Card>
-          */}
         </div>
         
 
