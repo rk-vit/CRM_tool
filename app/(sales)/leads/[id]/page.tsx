@@ -198,7 +198,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
             <Card className="border-0 shadow-sm bg-primary text-primary-foreground">
               <CardContent className="p-6">
                 <div className="grid grid-cols-2 gap-3">
-                  <Button variant="secondary" className="w-full" onClick={handleExotelCall}>
+                  <Button variant="secondary" className="w-full" >
                     <Phone className="h-4 w-4 mr-2" /> Call
                   </Button>
                   <Button variant="secondary" className="w-full" onClick={() => setEmailSheetOpen(true)}>
@@ -252,7 +252,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase font-semibold">Source</p>
-                    <p className="text-sm font-medium">{lead.medium}</p>
+                    <p className="text-sm font-medium">{lead.source}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase font-semibold">Sub-Status</p>

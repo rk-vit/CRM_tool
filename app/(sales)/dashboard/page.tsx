@@ -86,21 +86,19 @@ export default function SalesDashboard() {
       
       <div className="flex-1 p-4 md:p-6 space-y-6">
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 sm:grid-cols-1 gap-4">
           <StatsCard
             title="New Leads"
             value={stats?.newLeads || 0}
             icon={UserPlus}
             variant="primary"
           />
-          <Link href="#follow-ups" className="block outline-none">
-            <StatsCard
-              title="Today Follow-up"
-              value={stats?.todayFollowUp || 0}
-              icon={Calendar}
-              variant="warning"
-            />
-          </Link>
+          <StatsCard
+            title="Today Follow-up"
+            value={stats?.todayFollowUp || 0}
+            icon={Calendar}
+            variant="warning"
+          />
           <StatsCard
             title="Missed Follow-up"
             value={stats?.missedFollowUp || 0}
@@ -116,7 +114,7 @@ export default function SalesDashboard() {
         </div>
 
         {/* Second Row Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 sm:grid-cols-1 gap-4">
           <StatsCard
             title="Re-Engaged"
             value={stats?.reEngaged || 0}
@@ -145,9 +143,9 @@ export default function SalesDashboard() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-6 sm:grid-cols-1">
           {/* Recent Leads */}
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm sm:overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-semibold">My Recent Leads</CardTitle>
               <Button variant="ghost" size="sm" asChild>
@@ -157,7 +155,7 @@ export default function SalesDashboard() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
-              {myLeads.slice(0, 5).map((lead) => (
+              {myLeads.slice(0, 7).map((lead) => (
                 <Link
                   key={lead.id}
                   href={`/leads/${lead.id}`}
@@ -166,7 +164,9 @@ export default function SalesDashboard() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm truncate">{lead.name}</p>
-                      <Badge variant="outline" className="text-xs">{lead.id}</Badge>
+                      <Badge variant="outline" className="font-normal sm:text-[10px] text-xs h-4 px-1.5 text-muted-foreground">
+                        {lead.id}
+                      </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{lead.project}</p>
                   </div>
@@ -202,7 +202,6 @@ export default function SalesDashboard() {
                       )}
                     </div>
                     <div className="flex-1 pb-4">
-
                       <p className="text-sm font-medium">{event.title}</p>
                       <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal text-muted-foreground">
                         {event.leadId}
@@ -225,8 +224,8 @@ export default function SalesDashboard() {
         </div>
         
 
-        {/* Today's Schedule - Target for scroll */}
-        <Card id="follow-ups" className="border-0 shadow-sm scroll-mt-20">
+        {/* Today's Schedule */}
+        <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-semibold">Today&apos;s Follow-ups</CardTitle>
           </CardHeader>
@@ -243,7 +242,17 @@ export default function SalesDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{lead.name}</p>
+                    {/*Don't show phone number as of now
+                    <p className="text-xs text-muted-foreground">{lead.phone}</p>
+                    */}
                   </div>
+                  {/*Don't show call button as of now
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`tel:${lead.phone}`}>
+                      <Phone className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  */}
                 </Link>
               ))}
               {myLeads.filter(l => l.followUpDate).length === 0 && (

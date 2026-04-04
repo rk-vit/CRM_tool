@@ -53,7 +53,7 @@ function SidebarContent({ collapsed, onCollapse }: { collapsed: boolean; onColla
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
               RE
             </div>
-            <span className="font-semibold text-lg">PropCRM</span>
+            <span className="font-semibold text-lg">SriRam's CRM</span>
           </div>
         )}
         {collapsed && (
