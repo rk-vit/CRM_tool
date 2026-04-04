@@ -310,16 +310,6 @@ export default function LeadsPage() {
                             <DropdownMenuItem asChild>
                               <Link href={`/leads/${lead.id}`}>View Details</Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation() // 🔥 VERY IMPORTANT
-                                  setSelectedLead(lead) // store current row lead
-                                  e.preventDefault() 
-                                  setOpenConfirm(true)
-                                }}
-                              >
-                                Call Now
-                              </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Mail className="h-4 w-4 mr-2" /> Email
                             </DropdownMenuItem>

@@ -152,7 +152,13 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
     // Refresh data to show the new call log and timeline entry
     fetchLeadDetails()
   }
-
+    const formatDate = (date: string | number | Date | undefined) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  };
   const formatCallDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60).toString().padStart(2, "0")
     const secs = (seconds % 60).toString().padStart(2, "0")
@@ -230,9 +236,6 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
             <Button variant="outline" size="sm" onClick={handleCallClick}>
               <Phone className="h-4 w-4 mr-2" /> Call
             </Button>
-            <Button variant="outline" size="sm" className="hidden sm:flex">
-              <Mail className="h-4 w-4 mr-2" /> Email
-            </Button>
            
             <Sheet open={emailSheetOpen} onOpenChange={setEmailSheetOpen}>
               <SheetTrigger asChild>
@@ -309,62 +312,121 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                   <Button variant="secondary" className="w-full bg-white/10 hover:bg-white/20 border-0 text-white">
                     <Calendar className="h-4 w-4 mr-2" /> Schedule
                   </Button>
-                  <Button variant="secondary" className="w-full bg-white/10 hover:bg-white/20 border-0 text-white">
+                  <Button
+                    variant="secondary"
+                    className="w-full bg-white/10 hover:bg-white/20 border-0 text-white"
+                    onClick={() => {
+                      const phone = lead.phone.replace(/\D/g, "");
+
+                      const message = [
+                        `Dear ${lead.name},`,
+                        ``,
+                        `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
+                        ``,
+                        `Project Preview:`,
+                        `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
+                        ``,
+                        `Location (Google Maps):`,
+                        `https://maps.google.com/?q=Madhavaram,Chennai`,
+                        ``,
+                        `I’d love to connect with you to discuss the details further. Please let me know a convenient time for us to speak.`,
+                        ``,
+                        `Best Regards,`,
+                        `SRIRAM BUILDERS`,
+                        `95 0094 0094`
+                      ].join("\n");
+
+                      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+                      window.open(url, "_blank");
+                    }}
+                  >
                     <MessageSquare className="h-4 w-4 mr-2" /> WhatsApp
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                  <User className="h-4 w-4" /> Contact Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">Phone</p>
-                  <p className="font-medium flex items-center justify-between">
-                    {lead.phone}
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <ExternalLink className="h-3 w-3" />
-                    </Button>
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase font-semibold">Email</p>
-                  <p className="font-medium flex items-center justify-between">
-                    {lead.email}
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <ExternalLink className="h-3 w-3" />
-                    </Button>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <Card className="border-0 shadow-md rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <User className="h-4 w-4" /> Lead Details
+                  </CardTitle>
+                </CardHeader>
 
-            <Card className="border-0 shadow-sm">
+                <CardContent className="space-y-5 text-sm">
+
+                  {/* Phone */}
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Phone</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="font-semibold text-base text-foreground">{lead.phone}</p>
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <p className="text-medium text-muted-foreground uppercase tracking-wide">Email</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="font-semibold text-base text-foreground break-all">
+                        {lead.email}
+                      </p>
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Source */}
+                  <div>
+                    <p className="text-medium text-muted-foreground uppercase tracking-wide">Source</p>
+                    <p className="mt-1 font-semibold text-foreground">{lead.source || "-"}</p>
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <p className="text-medium text-muted-foreground uppercase tracking-wide">Sub Status</p>
+                    <div className="mt-1">
+                      <Badge className="px-2 py-0.5 text-xs capitalize">
+                        {lead.subStatus || "N/A"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Follow Up */}
+                  <div>
+                    <p className="text-medium text-muted-foreground uppercase tracking-wide">
+                      Next Follow Up
+                    </p>
+                    <p className="mt-1 font-semibold text-foreground">
+                      {formatDate(lead.followUpDate)}
+                    </p>
+                  </div>
+
+                </CardContent>
+              </Card>
+
+            <Card className="border-0 shadow-md rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold flex items-center gap-2">
                   <Tag className="h-4 w-4" /> Property Interest
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-semibold">Source</p>
-                    <p className="text-sm font-medium">{lead.source}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-semibold">Sub-Status</p>
-                    <p className="text-sm font-medium">
-                      <Badge variant="outline" className="text-xs font-normal">
-                        {lead.subStatus}
-                      </Badge>
-                    </p>
-                  </div>
+
+              <CardContent className="space-y-4 text-sm">
+
+                <div>
+                  <p className="text-medium text-muted-foreground uppercase tracking-wide">
+                    Project
+                  </p>
+                  <p className="mt-1 font-semibold text-foreground leading-relaxed">
+                    {lead.project || "-"}
+                  </p>
                 </div>
+
               </CardContent>
             </Card>
           </div>
