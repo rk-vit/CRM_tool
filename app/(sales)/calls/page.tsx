@@ -231,19 +231,11 @@ export default function CallsPage() {
                           {call.status}
                         </Badge>
                         {call.recordingUrl && (
-                          <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={() => setPlayingId(playingId === call.id ? null : call.id)}
-                            >
-                              {playingId === call.id ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <audio
+                            controls
+                            src={`/api/calls/recording?url=${encodeURIComponent(call.recordingUrl)}`}
+                            className="h-8"
+                          />
                         )}
                       </div>
                     </div>
