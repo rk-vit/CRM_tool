@@ -201,6 +201,9 @@ export default function SalesDashboard() {
                     </div>
                     <div className="flex-1 pb-4">
                       <p className="text-sm font-medium">{event.title}</p>
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal text-muted-foreground">
+                        {event.leadId}
+                      </Badge>
                       <p className="text-xs text-muted-foreground line-clamp-1">
                         {event.description}
                       </p>
