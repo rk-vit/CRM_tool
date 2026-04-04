@@ -226,6 +226,9 @@ export default function AdminDashboard() {
                     <div className="flex-1 pb-4">
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium">{event.title}</p>
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal text-muted-foreground">
+                          {event.leadId}
+                        </Badge>
                         <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded text-muted-foreground">
                           {event.type}
                         </span>
