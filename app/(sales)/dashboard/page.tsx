@@ -274,7 +274,7 @@ export default function SalesDashboard() {
         {/* Missed Follow Ups */}
         <Card id="missed-follow" className="border-0 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold">Missed Follow Ups&apos;s Follow-ups</CardTitle>
+            <CardTitle className="text-lg font-semibold">Missed Follow Ups</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
