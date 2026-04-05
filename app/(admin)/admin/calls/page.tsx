@@ -37,13 +37,13 @@ export default function CallsPage() {
   const [directionFilter, setDirectionFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [playingId, setPlayingId] = useState<string | null>(null)
-
+  const [assignedFilter, setAssignedFilter] = useState("all")
   useEffect(() => {
     async function fetchCalls() {
       if (!user?.id) return
       try {
         setLoading(true)
-        const res = await fetch(`/api/calls?assignedTo=${user.id}`)
+        const res = await fetch(`/api/calls`)
         const data = await res.json()
         setCalls(Array.isArray(data) ? data : [])
       } catch (error) {
@@ -56,17 +56,26 @@ export default function CallsPage() {
   }, [user?.id])
 
   const filteredCalls = calls.filter((call) => {
-    const matchesSearch = 
-      call.callerTo.includes(searchQuery) ||
-      call.callerNumber.includes(searchQuery) ||
-      call.leadId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (call.leadName?.toLowerCase().includes(searchQuery.toLowerCase()))
-    
-    const matchesDirection = directionFilter === "all" || call.direction === directionFilter
-    const matchesStatus = statusFilter === "all" || call.status === statusFilter
+  const matchesSearch = 
+    call.callerTo.includes(searchQuery) ||
+    call.callerNumber.includes(searchQuery) ||
+    call.leadId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    call.leadName?.toLowerCase().includes(searchQuery.toLowerCase())
 
-    return matchesSearch && matchesDirection && matchesStatus
-  })
+  const matchesDirection =
+    directionFilter === "all" || call.direction === directionFilter
+
+  const matchesStatus =
+    statusFilter === "all" || call.status === statusFilter
+
+  const matchesAssigned =
+  assignedFilter === "all" ||
+  call.assigned_to === assignedFilter ||
+  call.assignedTo === assignedFilter ||
+  call.user_id === assignedFilter
+
+  return matchesSearch && matchesDirection && matchesStatus && matchesAssigned
+})
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -74,6 +83,12 @@ export default function CallsPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+const uniqueUsers = [
+  ...new Set(
+    calls
+      .map(c => c.assigned_to || c.assignedTo || c.user_id)
+      .filter(Boolean)
+  )]  
   if (loading && calls.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -98,7 +113,7 @@ export default function CallsPage() {
               className="pl-9"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Select value={directionFilter} onValueChange={setDirectionFilter}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Direction" />
@@ -120,6 +135,20 @@ export default function CallsPage() {
                 <SelectItem value="busy">Busy</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={assignedFilter} onValueChange={setAssignedFilter}>
+  <SelectTrigger className="w-[160px]">
+    <SelectValue placeholder="Assigned To" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="all">All Users</SelectItem>
+
+    {uniqueUsers.map((user) => (
+      <SelectItem key={user} value={user}>
+        {user}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
           </div>
         </div>
 

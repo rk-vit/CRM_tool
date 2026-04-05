@@ -54,7 +54,8 @@ const statusFilters: { value: LeadStatus | "all"; label: string }[] = [
   { value: "qualified", label: "Qualified" },
   { value: "negotiation", label: "Negotiation" },
   { value: "won", label: "Won" },
-  { value: "lost", label: "Lost" }
+  { value: "lost", label: "Lost" },
+  { value: "reengaged", label: "Re-Engaged" },
 ]
 
 export default function LeadsPage() {
@@ -148,7 +149,8 @@ export default function LeadsPage() {
       qualified: "bg-green-600 text-white",
       negotiation: "bg-orange-500 text-white",
       won: "bg-emerald-600 text-white",
-      lost: "bg-destructive text-destructive-foreground"
+      lost: "bg-destructive text-destructive-foreground",
+      reengaged: "bg-purple-600 text-white",
     }
     return colors[status] || "bg-secondary text-secondary-foreground"
   }
@@ -310,16 +312,6 @@ export default function LeadsPage() {
                             <DropdownMenuItem asChild>
                               <Link href={`/leads/${lead.id}`}>View Details</Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation() // 🔥 VERY IMPORTANT
-                                  setSelectedLead(lead) // store current row lead
-                                  e.preventDefault() 
-                                  setOpenConfirm(true)
-                                }}
-                              >
-                                Call Now
-                              </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Mail className="h-4 w-4 mr-2" /> Email
                             </DropdownMenuItem>
