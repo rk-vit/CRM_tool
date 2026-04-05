@@ -370,37 +370,30 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                   <Button variant="secondary" className="w-full min-w-0 bg-white/10 hover:bg-white/20 border-0 text-white">
                     <Calendar className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Schedule</span>
                   </Button>
-                  <Button
-                    variant="secondary"
-                    className="w-full min-w-0 bg-white/10 hover:bg-white/20 border-0 text-white"
-                    onClick={() => {
-                      const phone = lead.phone.replace(/\D/g, "");
- 
-                      const message = [
-                        `Dear ${lead.name},`,
-                        ``,
-                        `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
-                        ``,
-                        `Project Preview:`,
-                        `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
-                        ``,
-                        `Location (Google Maps):`,
-                        `https://maps.google.com/?q=Madhavaram,Chennai`,
-                        ``,
-                        `I'd love to connect with you to discuss the details further. Please let me know a convenient time for us to speak.`,
-                        ``,
-                        `Best Regards,`,
-                        `SRIRAM BUILDERS`,
-                        `95 0094 0094`
-                      ].join("\n");
- 
-                      const url = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
- 
-                      window.open(url, "_system");
-                    }}
+                  <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
+                      `Dear ${lead.name},`,
+                      ``,
+                      `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
+                      ``,
+                      `Project Preview:`,
+                      `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
+                      ``,
+                      `Location (Google Maps):`,
+                      `https://maps.google.com/?q=Madhavaram,Chennai`,
+                      ``,
+                      `I'd love to connect with you to discuss the details further. Please let me know a convenient time for us to speak.`,
+                      ``,
+                      `Best Regards,`,
+                      `SRIRAM BUILDERS`,
+                      `95 0094 0094`,
+                    ].join("\n"))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
                   >
-                    <MessageSquare className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">WhatsApp</span>
-                  </Button>
+                    <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
+                    <span className="truncate">WhatsApp</span>
+                  </a>
                 </div>
               </CardContent>
             </Card>
