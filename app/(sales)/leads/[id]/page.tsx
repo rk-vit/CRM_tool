@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { useAuth } from "@/lib/auth-context"
-import { App } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import {
   Dialog,
@@ -81,7 +81,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
   const [callMinimized, setCallMinimized] = useState(false)
   const [callSid, setCallSid] = useState<string | null>(null)
   const [callResult, setCallResult] = useState<string | null>(null)
- 
+  
   // Timer for the calling screen
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -267,6 +267,23 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
   }
 
   const { lead, timeline, calls, emails, comments } = data;
+  const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
+  `Dear ${lead.name},`,
+  ``,
+  `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
+  ``,
+  `Project Preview:`,
+  `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
+  ``,
+  `Location (Google Maps):`,
+  `https://maps.google.com/?q=Madhavaram,Chennai`,
+  ``,
+  `I'd love to connect with you to discuss the details further. Please let me know a convenient time for us to speak.`,
+  ``,
+  `Best Regards,`,
+  `SRIRAM BUILDERS`,
+  `95 0094 0094`,
+].join("\n"))}`;
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden w-full">
@@ -374,53 +391,19 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                   <Button variant="secondary" className="w-full min-w-0 bg-white/10 hover:bg-white/20 border-0 text-white">
                     <Calendar className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Schedule</span>
                   </Button>
-                  <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
-                        `Dear ${lead.name},`,
-                        ``,
-                        `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
-                        ``,
-                        `Project Preview:`,
-                        `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
-                        ``,
-                        `Location (Google Maps):`,
-                        `https://maps.google.com/?q=Madhavaram,Chennai`,
-                        ``,
-                        `I'd love to connect with you to discuss the details further. Please let me know a convenient time for us to speak.`,
-                        ``,
-                        `Best Regards,`,
-                        `SRIRAM BUILDERS`,
-                        `95 0094 0094`,
-                      ].join("\n"))}`}
-                      target="_system"
-                      rel="noopener noreferrer"
-                      onClick={(e) => {
-                        if (typeof window !== "undefined" && (window as any).Capacitor?.isNativePlatform?.()) {
-                          e.preventDefault();
-                          const url = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
-                            `Dear ${lead.name},`,
-                            ``,
-                            `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
-                            ``,
-                            `Project Preview:`,
-                            `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
-                            ``,
-                            `Location (Google Maps):`,
-                            `https://maps.google.com/?q=Madhavaram,Chennai`,
-                            ``,
-                            `I'd love to connect with you to discuss the details further. Please let me know a convenient time for us to speak.`,
-                            ``,
-                            `Best Regards,`,
-                            `SRIRAM BUILDERS`,
-                            `95 0094 0094`,
-                          ].join("\n"))}`;
-                          window.open(url, "_system");
-                        }
-                      }}
-                      className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
-                    >
-                      <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
-                      <span className="truncate">WhatsApp</span>
-                    </a>
+                  <button
+                    onClick={async () => {
+                      if (Capacitor.isNativePlatform()) {
+                        await Browser.open({ url: whatsappUrl });
+                      } else {
+                        window.open(whatsappUrl, "_blank");
+                      }
+                    }}
+                    className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
+                    <span className="truncate">WhatsApp check</span>
+                  </button>
                 </div>
               </CardContent>
             </Card>
