@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { useAuth } from "@/lib/auth-context"
-import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import {
   Dialog,
@@ -394,7 +394,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                   <button
                     onClick={async () => {
                       if (Capacitor.isNativePlatform()) {
-                        await Browser.open({ url: whatsappUrl });
+                        window.location.href = whatsappUrl;
                       } else {
                         window.open(whatsappUrl, "_blank");
                       }
@@ -402,7 +402,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                     className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
                   >
                     <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
-                    <span className="truncate">WhatsApp check</span>
+                    <span className="truncate">WhatsApp</span>
                   </button>
                 </div>
               </CardContent>
