@@ -394,7 +394,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                         `95 0094 0094`
                       ].join("\n");
  
-                      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                      const url = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
  
                       window.open(url, "_system");
                     }}
