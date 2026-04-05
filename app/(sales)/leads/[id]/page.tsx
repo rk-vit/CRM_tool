@@ -394,18 +394,13 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                     <Calendar className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Schedule</span>
                   </Button>
                   <button
-                    onClick={async () => {
-                        if (Capacitor.isNativePlatform()) {
-                          const { value } = await AppLauncher.canOpenUrl({ url: 'com.whatsapp' });
-                          if (value) {
-                            await AppLauncher.openUrl({ url: whatsappUrl });
-                          } else {
-                            alert("WhatsApp is not installed on this device.");
-                          }
-                        } else {
-                          window.open(whatsappUrl, "_blank");
-                        }
-                      }}
+                                        onClick={async () => {
+                      if (Capacitor.isNativePlatform()) {
+                        await AppLauncher.openUrl({ url: whatsappUrl });
+                      } else {
+                        window.open(whatsappUrl, "_blank");
+                      }
+                    }}
                     className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
                   >
                     <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
