@@ -241,38 +241,80 @@ export default function LeadsPage() {
 
         {viewMode === "list" ? (
           <Card className="border-0 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader><TableRow className="bg-secondary/50"><TableHead className="w-[100px]">ID</TableHead><TableHead>Name</TableHead><TableHead className="hidden md:table-cell">Phone</TableHead><TableHead className="hidden lg:table-cell">Project</TableHead><TableHead>Status</TableHead><TableHead className="w-[80px]">Actions</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {paginatedLeads.map((lead) => (
-                    <TableRow key={lead.id} className="hover:bg-accent/50 group">
-                      <TableCell className="font-medium text-primary font-mono text-xs">{lead.id}</TableCell>
-                      <TableCell><div className="flex flex-col"><p className="font-medium text-sm">{lead.name}</p><p className="text-[10px] text-muted-foreground md:hidden">{lead.phone}</p></div></TableCell>
-                      <TableCell className="hidden md:table-cell text-sm">{lead.phone}</TableCell>
-                      <TableCell className="hidden lg:table-cell text-xs"><Badge variant="outline" className="font-normal">{lead.project}</Badge></TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                           <Badge variant="secondary" className={`${getStatusColor(lead.status)} text-[10px] uppercase px-2 py-0`}>{lead.status}</Badge>
-                           {lead.subStatus && <Badge variant="outline" className={`${getSubStatusColor(lead.subStatus)} text-[10px] uppercase px-2 py-0`}>{lead.subStatus}</Badge>}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild><Link href={`/leads/${lead.id}`}>View Details</Link></DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => { setSelectedLead(lead); setOpenConfirm(true) }} className="text-green-600"><Phone className="h-4 w-4 mr-2" /> Call Lead</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
-        ) : (
+  <div className="overflow-x-auto">
+    <Table>
+      <TableHeader>
+        <TableRow className="bg-secondary/50">
+          <TableHead className="w-[100px]">ID</TableHead>
+          <TableHead>Name</TableHead>
+          <TableHead className="hidden md:table-cell">Phone</TableHead>
+          <TableHead className="hidden lg:table-cell">Project</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="w-[80px]">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {paginatedLeads.map((lead) => (
+          <TableRow 
+            key={lead.id} 
+            className="hover:bg-accent/50 group cursor-pointer transition-colors"
+            // Routing when the row is clicked
+            onClick={() => router.push(`/leads/${lead.id}`)}
+          >
+            <TableCell className="font-medium text-primary font-mono text-xs">
+              {lead.id}
+            </TableCell>
+            <TableCell>
+              <div className="flex flex-col">
+                <p className="font-medium text-sm">{lead.name}</p>
+                <p className="text-[10px] text-muted-foreground md:hidden">{lead.phone}</p>
+              </div>
+            </TableCell>
+            <TableCell className="hidden md:table-cell text-sm">
+              {lead.phone}
+            </TableCell>
+            <TableCell className="hidden lg:table-cell text-xs">
+              <Badge variant="outline" className="font-normal">{lead.project}</Badge>
+            </TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className={`${getStatusColor(lead.status)} text-[10px] uppercase px-2 py-0`}>
+                  {lead.status}
+                </Badge>
+                {lead.subStatus && (
+                  <Badge variant="outline" className={`${getSubStatusColor(lead.subStatus)} text-[10px] uppercase px-2 py-0`}>
+                    {lead.subStatus}
+                  </Badge>
+                )}
+              </div>
+            </TableCell>
+            {/* We use stopPropagation here so clicking the button doesn't trigger the row's router.push */}
+            <TableCell onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/leads/${lead.id}`}>View Details</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => { setSelectedLead(lead); setOpenConfirm(true) }} 
+                    className="text-green-600"
+                  >
+                    <Phone className="h-4 w-4 mr-2" /> Call Lead
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </div>
+</Card>        ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginatedLeads.map((lead) => (
               <Card key={lead.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">

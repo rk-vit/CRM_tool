@@ -24,7 +24,7 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
-  const { user } = useAuth()
+  const { user,logout } = useAuth()
   const [unknownCallersOpen, setUnknownCallersOpen] = useState(false)
   const [unknownCount, setUnknownCount] = useState(0)
 
@@ -101,7 +101,7 @@ export function Header({ title, subtitle }: HeaderProps) {
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">Logout</DropdownMenuItem>
+              <DropdownMenuItem onClick={logout} className="text-destructive">Logout</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
