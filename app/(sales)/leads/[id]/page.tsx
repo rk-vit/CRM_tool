@@ -1,4 +1,5 @@
- import { useState, useEffect, use } from "react"
+"use client";
+import { useState, useEffect, use } from "react"
 import { Header } from "@/components/crm/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -62,6 +63,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
  
+const formatDate = (date: string | null | undefined) =>
+  date ? format(new Date(date), "MMM dd, yyyy hh:mm a") : "—";
+
 export default function LeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [quickActionOpen, setQuickActionOpen] = useState(false)
