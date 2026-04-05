@@ -97,3 +97,16 @@ export interface SalesExecutive extends User {
   totalCalls: number
   conversionRate: number
 }
+
+export interface UnknownCaller {
+  id: string
+  phone: string
+  exotelCallSid?: string
+  callDuration: number
+  callStatus: string
+  recordingUrl?: string
+  reviewed: boolean
+  discarded: boolean
+  convertedLeadId?: string
+  createdAt: string
+}

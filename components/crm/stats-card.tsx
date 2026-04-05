@@ -41,6 +41,7 @@ export function StatsCard({ title, value, icon: Icon, trend, variant = "default"
     const titleLower = title.toLowerCase()
     const basePath = pathname.startsWith("/admin") ? "/admin" : ""
 
+    if (titleLower.includes("missed")) return null
     if (titleLower.includes("total leads") || titleLower.includes("all leads")) return `${basePath}/leads`
     if (titleLower.includes("new") || titleLower.includes("today leads")) return `${basePath}/leads?status=new`
     if (titleLower.includes("follow-up")) return `${basePath}/leads?status=follow_up`
@@ -61,7 +62,7 @@ export function StatsCard({ title, value, icon: Icon, trend, variant = "default"
   }
 
   return (
-    <Card 
+    <Card
       className={cn(
         "transition-all duration-200 border-0 shadow-sm",
         variants[variant],
