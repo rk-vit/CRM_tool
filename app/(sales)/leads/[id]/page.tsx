@@ -9,6 +9,8 @@ import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter
 import { useAuth } from "@/lib/auth-context"
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { AppLauncher } from '@capacitor/app-launcher';
+
 import {
   Dialog,
   DialogContent,
@@ -393,16 +395,21 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                   </Button>
                   <button
                     onClick={async () => {
-                      if (Capacitor.isNativePlatform()) {
-                        window.location.href = whatsappUrl;
-                      } else {
-                        window.open(whatsappUrl, "_blank");
-                      }
-                    }}
+                        if (Capacitor.isNativePlatform()) {
+                          const { value } = await AppLauncher.canOpenUrl({ url: 'com.whatsapp' });
+                          if (value) {
+                            await AppLauncher.openUrl({ url: whatsappUrl });
+                          } else {
+                            alert("WhatsApp is not installed on this device.");
+                          }
+                        } else {
+                          window.open(whatsappUrl, "_blank");
+                        }
+                      }}
                     className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
                   >
                     <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
-                    <span className="truncate">WhatsApp</span>
+                    <span className="truncate">WhatsApp Check 1</span>
                   </button>
                 </div>
               </CardContent>
