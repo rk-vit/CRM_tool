@@ -15,6 +15,8 @@ async function main() {
   try {
     // 1. Clean up existing tables and types
     console.log('Cleaning up existing database objects...');
+    await sql`DROP TABLE IF EXISTS blocked_numbers CASCADE`;
+    await sql`DROP TABLE IF EXISTS unknown_callers CASCADE`;
     await sql`DROP TABLE IF EXISTS comments CASCADE`;
     await sql`DROP TABLE IF EXISTS email_logs CASCADE`;
     await sql`DROP TABLE IF EXISTS call_logs CASCADE`;
@@ -112,7 +114,8 @@ async function main() {
         status call_status NOT NULL,
         recording_url TEXT,
         assigned_to TEXT REFERENCES users(id) ON DELETE SET NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        exotel_call_sid TEXT
       );
     `;
 
@@ -135,6 +138,30 @@ async function main() {
         lead_id TEXT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
         text TEXT NOT NULL,
         created_by TEXT NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    await sql`
+      CREATE TABLE unknown_callers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        phone TEXT NOT NULL,
+        exotel_call_sid TEXT,
+        call_duration INTEGER DEFAULT 0,
+        call_status TEXT DEFAULT 'no_answer',
+        recording_url TEXT,
+        reviewed BOOLEAN DEFAULT false,
+        discarded BOOLEAN DEFAULT false,
+        converted_lead_id TEXT REFERENCES leads(id),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    await sql`
+      CREATE TABLE blocked_numbers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        phone TEXT UNIQUE NOT NULL,
+        reason TEXT DEFAULT 'spam',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `;

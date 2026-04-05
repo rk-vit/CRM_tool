@@ -62,7 +62,7 @@ export function StatsCard({ title, value, icon: Icon, trend, variant = "default"
   }
 
   return (
-    <Card 
+    <Card
       className={cn(
         "transition-all duration-200 border-0 shadow-sm",
         variants[variant],
