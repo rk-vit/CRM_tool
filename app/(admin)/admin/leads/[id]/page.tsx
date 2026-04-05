@@ -233,12 +233,11 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
               <TabsContent value="calls" className="pt-6">
                 <div className="space-y-4">
                   {calls.map((call) => (
-                    <Card key={call.id} className="border-0 shadow-sm">
+                    <Card key={call.id} className="border-0 shadow-sm bg-secondary/30">
                       <CardContent className="p-4 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                            call.direction === "inbound" ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
-                          }`}>
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${call.direction === "inbound" ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
+                            }`}>
                             <Phone className="h-5 w-5" />
                           </div>
                           <div>
@@ -252,19 +251,30 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
                             </div>
                           </div>
                         </div>
-                        <Badge variant={call.status === "answered" ? "default" : "destructive"}>
-                          {call.status}
-                        </Badge>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant={call.status === "answered" ? "default" : "destructive"}>
+                            {call.status}
+                          </Badge>
+                          {call.recordingUrl && (
+                            <audio 
+                              controls 
+                              src={`/api/calls/recording?url=${encodeURIComponent(call.recordingUrl)}`} 
+                              className="h-8 max-w-[200px]" 
+                              title="Listen to call recording"
+                            />
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
                   {calls.length === 0 && (
                     <div className="text-center py-10 text-muted-foreground bg-secondary/20 rounded-lg">
-                      No call logs found for this lead.
+                      No call logs found.
                     </div>
                   )}
                 </div>
               </TabsContent>
+
 
               <TabsContent value="notes" className="pt-6">
                 <div className="space-y-4">

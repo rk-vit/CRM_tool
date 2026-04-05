@@ -12,15 +12,15 @@ import { useCall } from "@/lib/call-context"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "PropCRM - Real Estate Lead Management",
+  title: "Sriram's CRM - An CRM Built By Axion Technologies",
   description:
     "Professional CRM for real estate lead management and sales tracking",
-  generator: "v0.app",
+  generator: "Axion",
   icons: {
     icon: [
       { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
       { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg" },
     ],
     apple: "/apple-icon.png",
   },
