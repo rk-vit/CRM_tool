@@ -54,27 +54,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoLogin = async (role: "sales" | "admin") => {
-    setIsLoading(true);
-    setError("");
-    const demoEmail =
-      role === "admin" ? "admin1@gmail.com" : "user1@gmail.com";
-    const demoPassword = 
-      role === "admin" ? "admin@123" : "user1@123";
-    
-    try {
-      const success = await login(demoEmail, demoPassword);
-
-      if (!success) {
-        setError("Demo login failed. Please try again.");
-        setIsLoading(false);
-      }
-    } catch (err) {
-      console.error("Demo login error:", err);
-      setError("An unexpected error occurred. Please try again.");
-      setIsLoading(false);
-    }
-  };
 
   if (!mounted || (isAuthenticated && user)) {
     return (
@@ -170,24 +149,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Button
-              variant="outline"
-              onClick={() => handleDemoLogin("sales")}
-              disabled={isLoading}
-              className="h-11 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-            >
-              Sales Executive
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleDemoLogin("admin")}
-              disabled={isLoading}
-              className="h-11 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-            >
-              Administrator
-            </Button>
-          </div>
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-8">
