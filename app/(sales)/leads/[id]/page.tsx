@@ -396,7 +396,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
  
                       const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
  
-                      window.open(url, "_blank");
+                      window.open(url, "_system");
                     }}
                   >
                     <MessageSquare className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">WhatsApp</span>
