@@ -19,7 +19,7 @@ export async function GET(request: Request) {
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE status = 'new') as new_leads,
         COUNT(*) FILTER (WHERE status = 'won') as booked,
-        COUNT(*) FILTER (WHERE status = 'reengaged') as re_engaged,
+        COUNT(*) FILTER (WHERE status = 'reengaged') as reengaged,
         COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE) as today_leads,
         COUNT(*) FILTER (WHERE follow_up_date::date = CURRENT_DATE) as today_follow_up,
         COUNT(*) FILTER (WHERE follow_up_date < CURRENT_DATE AND status NOT IN ('won', 'lost')) as missed_follow_up
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     const stats = counts[0];
     return NextResponse.json({
       newLeads: Number(stats.new_leads) || 0,
-      reEngaged: Number(stats.re_engaged), 
+      reEngaged: Number(stats.reengaged),
       todayFollowUp: Number(stats.today_follow_up) || 0,
       missedFollowUp: Number(stats.missed_follow_up) || 0,
       todayLeads: Number(stats.today_leads) || 0,
