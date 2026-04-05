@@ -269,24 +269,62 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
     );
   }
 
+  const handleWhatsApp = async () => {
+  const cleanPhone = lead.phone.replace(/\D/g, "");
+  const message = [
+    `Dear ${lead.name},`,
+    ``,
+    `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS.`,
+    ``,
+    `Best Regards,`,
+    `SRIRAM BUILDERS`,
+  ].join("\n");
+
+  const encodedMsg = encodeURIComponent(message);
+  
+  // Standard Web URL
+  const webUrl = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
+  // Native Scheme for App
+  const nativeUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodedMsg}`;
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      // Check if WhatsApp can be opened via scheme
+      const { value } = await AppLauncher.canOpenUrl({ url: nativeUrl });
+      if (value) {
+        await AppLauncher.openUrl({ url: nativeUrl });
+      } else {
+        // Fallback to web URL inside the app if scheme fails
+        await AppLauncher.openUrl({ url: webUrl });
+      }
+    } catch (e) {
+      console.error("WhatsApp native error:", e);
+      window.open(webUrl, "_blank");
+    }
+  } else {
+    window.open(webUrl, "_blank");
+  }
+};
   const { lead, timeline, calls, emails, comments } = data;
-  const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
-  `Dear ${lead.name},`,
-  ``,
-  `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
-  ``,
-  `Project Preview:`,
-  `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
-  ``,
-  `Location (Google Maps):`,
-  `https://maps.google.com/?q=Madhavaram,Chennai`,
-  ``,
-  `I'd love to connect with you to discuss the details further. Please let me know a convenient time for us to speak.`,
-  ``,
-  `Best Regards,`,
-  `SRIRAM BUILDERS`,
-  `95 0094 0094`,
-].join("\n"))}`;
+//   const message = [
+
+//   const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
+//   `Dear ${lead.name},`,
+//   ``,
+//   `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
+//   ``,
+//   `Project Preview:`,
+//   `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
+//   ``,
+//   `Location (Google Maps):`,
+//   `https://maps.google.com/?q=Madhavaram,Chennai`,
+//   ``,
+//   `I'd love to connect with you to discuss the details further. Please let me know a convenient time for us to speak.`,
+//   ``,
+//   `Best Regards,`,
+//   `SRIRAM BUILDERS`,
+//   `95 0094 0094`,
+// ].join("\n"))}`;
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden w-full">
@@ -395,9 +433,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                     <Calendar className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Schedule</span>
                   </Button>
                   <button
-                  onClick={async () => {
-                      await Browser.open({ url: 'http://capacitorjs.com/' });
-                  }}
+                  onClick={handleWhatsApp}
                     className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
                   >
                     <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
