@@ -23,8 +23,18 @@ import {
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import type { Lead, TimelineEvent, DashboardStats } from "@/lib/types"
- 
+import { useRouter } from "next/navigation"
+const scrollToSection = (id: string) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth" });
+  }
+};
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+const todayString = new Date().toISOString().split("T")[0];
 export default function SalesDashboard() {
+  const router = useRouter();
   const { user } = useAuth()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [myLeads, setMyLeads] = useState<Lead[]>([])
@@ -98,12 +108,14 @@ export default function SalesDashboard() {
             value={stats?.todayFollowUp || 0}
             icon={Calendar}
             variant="warning"
+            onClick={() => scrollToSection("today-follow")}
           />
           <StatsCard
             title="Missed Follow-up"
             value={stats?.missedFollowUp || 0}
             icon={AlertCircle}
             variant="destructive"
+            onClick={() => scrollToSection("missed-follow")}
           />
           <StatsCard
             title="Booked"
@@ -112,12 +124,14 @@ export default function SalesDashboard() {
             variant="success"
           />
         </div>
- 
-        {/* Second Row Stats — 2 cols on mobile, 5 on md+ */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
+
+        {/* Second Row Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 gap-4">
           <StatsCard
             title="Re-Engaged"
             value={stats?.reEngaged || 0}
+             onClick={() => router.push("/leads?status=reengaged")}
+
             icon={TrendingUp}
           />
           <StatsCard
@@ -134,11 +148,6 @@ export default function SalesDashboard() {
             title="All Leads"
             value={stats?.allLeads || 0}
             icon={Users}
-          />
-          <StatsCard
-            title="Total Calls"
-            value={0}
-            icon={Phone}
           />
         </div>
  
@@ -223,15 +232,61 @@ export default function SalesDashboard() {
             </CardContent>
           </Card>
         </div>
- 
-        {/* Today's Follow-ups */}
-        <Card className="border-0 shadow-sm overflow-hidden">
-          <CardHeader className="pb-2 px-4 sm:px-6">
-            <CardTitle className="text-base sm:text-lg font-semibold">Today&apos;s Follow-ups</CardTitle>
+        
+
+        {/* Today's Schedule */}
+        <Card id= "today-follow" className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold">Today&apos;s Follow-ups</CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-              {myLeads.filter(l => l.followUpDate).slice(0, 6).map((lead) => (
+          <CardContent>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {myLeads.filter(l => l.followUpDate?.startsWith(todayString)).slice(0, 6).map((lead) => (
+                <Link
+                  href={`/leads/${lead.id}`}
+                  key={lead.id}
+                  className="flex items-center gap-3 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                    {lead.name.split(" ").map(n => n[0]).join("")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{lead.name}</p>
+                    {/*Don't show phone number as of now
+                    <p className="text-xs text-muted-foreground">{lead.phone}</p>
+                    */}
+                  </div>
+                  {/*Don't show call button as of now
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`tel:${lead.phone}`}>
+                      <Phone className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  */}
+                </Link>
+              ))}
+              {myLeads.filter(l => l.followUpDate).length === 0 && (
+                <p className="col-span-full text-center py-4 text-sm text-muted-foreground">No follow-ups scheduled for today.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Missed Follow Ups */}
+        <Card id="missed-follow" className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold">Missed Follow Ups&apos;s Follow-ups</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {myLeads
+                .filter(l => {
+                  if (!l.followUpDate) return false;
+
+                  const followUp = new Date(l.followUpDate);
+                  return followUp < today;
+                })
+                .slice(0, 6)
+                .map((lead) => (
                 <Link
                   href={`/leads/${lead.id}`}
                   key={lead.id}

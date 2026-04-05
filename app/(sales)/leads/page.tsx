@@ -64,7 +64,8 @@ const statusFilters: { value: LeadStatus | "all"; label: string }[] = [
   { value: "qualified", label: "Qualified" },
   { value: "negotiation", label: "Negotiation" },
   { value: "won", label: "Won" },
-  { value: "lost", label: "Lost" }
+  { value: "lost", label: "Lost" },
+  { value: "reengaged", label: "Re-Engaged" },
 ]
 
 export default function LeadsPage() {
@@ -146,12 +147,13 @@ export default function LeadsPage() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      new: "bg-blue-100 text-blue-700",
-      contacted: "bg-orange-100 text-orange-700",
-      qualified: "bg-green-100 text-green-700",
-      negotiation: "bg-yellow-100 text-yellow-700",
-      won: "bg-emerald-100 text-emerald-700",
-      lost: "bg-red-100 text-red-700"
+      new: "bg-chart-1 text-white",
+      contacted: "bg-chart-2 text-white",
+      qualified: "bg-green-600 text-white",
+      negotiation: "bg-orange-500 text-white",
+      won: "bg-emerald-600 text-white",
+      lost: "bg-destructive text-destructive-foreground",
+      reengaged: "bg-purple-600 text-white",
     }
     return colors[status.toLowerCase()] || "bg-secondary text-secondary-foreground"
   }

@@ -28,7 +28,6 @@ export async function GET(request: Request) {
     `, params);
 
     const stats = counts[0];
-
     return NextResponse.json({
       newLeads: Number(stats.new_leads) || 0,
       reEngaged: Number(stats.reengaged),
