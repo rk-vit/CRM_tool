@@ -123,7 +123,8 @@ export default function LeadsPage() {
         lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.phone.includes(searchQuery) ||
         lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lead.id.toLowerCase().includes(searchQuery.toLowerCase())
+        lead.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (lead.source && lead.source.toLowerCase().includes(searchQuery.toLowerCase()))
       const matchesStatus = statusFilter === "all" || lead.status === statusFilter
       const matchesProject = projectFilter === "all" || lead.project === projectFilter
       return matchesSearch && matchesStatus && matchesProject
