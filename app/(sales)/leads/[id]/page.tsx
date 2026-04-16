@@ -1,13 +1,17 @@
 "use client";
+import { useState, useEffect, use } from "react"
+import { Header } from "@/components/crm/header"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
+import { useAuth } from "@/lib/auth-context"
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { AppLauncher } from '@capacitor/app-launcher';
+import { Browser } from '@capacitor/browser';
 
-import { useState, useEffect, use } from "react";
-import { Header } from "@/components/crm/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
-import { useAuth } from "@/lib/auth-context";
 import {
   Dialog,
   DialogContent,
@@ -61,7 +65,21 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 const formatDate = (date: string | null | undefined) =>
   date ? format(new Date(date), "MMM dd, yyyy hh:mm a") : "—";
 
+
+
 export default function LeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  const [quickActionOpen, setQuickActionOpen] = useState(false)
+  const [callConfirmOpen, setCallConfirmOpen] = useState(false)
+  const [isCalling, setIsCalling] = useState(false)
+  const [callDuration, setCallDuration] = useState(0)
+  const [callLoading, setCallLoading] = useState(false)
+  const [callError, setCallError] = useState<string | null>(null)
+  const [callMinimized, setCallMinimized] = useState(false)
+  const [callSid, setCallSid] = useState<string | null>(null)
+  const [callResult, setCallResult] = useState<string | null>(null)
+  
+  // Timer for the calling screen
   const { id } = use(params);
   const [quickActionOpen, setQuickActionOpen] = useState(false);
   const [callConfirmOpen, setCallConfirmOpen] = useState(false);
@@ -72,6 +90,119 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
   const [callMinimized, setCallMinimized] = useState(false);
   const [callSid, setCallSid] = useState<string | null>(null);
   const [callResult, setCallResult] = useState<string | null>(null);
+  const [emailSheetOpen, setEmailSheetOpen] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailContent, setEmailContent] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [data, setData] = useState<{
+    lead: Lead;
+    timeline: TimelineEvent[];
+    calls: CallLog[];
+    emails: EmailLog[];
+    comments: Comment[];
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isCalling) {
+      interval = setInterval(() => {
+        setCallDuration((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setCallDuration(0);
+    }
+    return () => clearInterval(interval);
+  }, [isCalling]);
+
+  useEffect(() => {
+    if (!isCalling || !callSid) return
+ 
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/calls/status?callSid=${callSid}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.ended) {
+          // Call has ended — auto-dismiss widget
+          clearInterval(pollInterval)
+          setIsCalling(false)
+          setCallResult(
+            data.status === "answered"
+              ? `Call completed — ${Math.floor(data.duration / 60)}m ${data.duration % 60}s`
+              : data.status === "busy"
+              ? "Lead was busy"
+              : "Call was not answered"
+          );
+          setTimeout(() => setCallResult(null), 5000);
+          fetchLeadDetails();
+        }
+      } catch (err) {
+        console.error("Poll error:", err);
+      }
+    }, 5000);
+    return () => clearInterval(pollInterval);
+  }, [isCalling, callSid]);
+
+  const fetchLeadDetails = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/api/leads/${id}`);
+      if (!res.ok) throw new Error("Failed to fetch lead details");
+      const json = await res.json();
+      setData(json);
+    } catch (err) {
+      console.error(err);
+      setError("Could not load lead details. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeadDetails();
+  }, [id]);
+
+  const handleCallClick = () => {
+    setCallError(null);
+    setCallConfirmOpen(true);
+  };
+
+  const handleConfirmCall = async () => {
+    setCallLoading(true);
+    setCallError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/calls/connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId: lead.id }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to initiate call");
+      setCallSid(result.callSid || null);
+      setCallConfirmOpen(false);
+      setIsCalling(true);
+    } catch (err: any) {
+      setCallError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setCallLoading(false);
+    }
+  };
+
+  const handleEndCall = () => {
+    setIsCalling(false);
+    setCallSid(null);
+    fetchLeadDetails();
+  };
+
+  const formatCallDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = (seconds % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
+  };
   const [emailSheetOpen, setEmailSheetOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailContent, setEmailContent] = useState("");
@@ -251,6 +382,23 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
   `SRIRAM BUILDERS`,
   `95 0094 0094`,
 ].join("\n"))}`;
+  const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
+  `Dear ${lead.name},`,
+  ``,
+  `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
+  ``,
+  `Project Preview:`,
+  `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
+  ``,
+  `Location (Google Maps):`,
+  `https://maps.google.com/?q=Madhavaram,Chennai`,
+  ``,
+  `I'd love to connect with you to discuss the details further. Please let me know a convenient time for us to speak.`,
+  ``,
+  `Best Regards,`,
+  `SRIRAM BUILDERS`,
+  `95 0094 0094`,
+].join("\n"))}`;
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden w-full">
@@ -306,13 +454,22 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                     <Calendar className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Schedule</span>
                   </Button>
                   <button
+                 onClick={async () => {
+                    if (Capacitor.isNativePlatform()) {
+                      await Browser.open({ url: whatsappUrl });
+                    } else {
+                      window.open(whatsappUrl, "_blank");
+                    }
+                  }}
+                    className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
+                  <button
                   onClick={async () => {
                       await Browser.open({ url: 'http://capacitorjs.com/' });
                   }}
                     className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
                   >
                     <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
-                    <span className="truncate">Capacitor Open</span>
+                    <span className="truncate">Whatsapp</span>
                   </button>
                 </div>
               </CardContent>
