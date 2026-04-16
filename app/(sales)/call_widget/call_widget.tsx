@@ -15,13 +15,11 @@ import {
 
 interface FloatingCallWidgetProps {
   contactName: string;
-  contactPhone: string;
   onClose: () => void;
 }
 
 export function FloatingCallWidget({
   contactName,
-  contactPhone,
   onClose,
 }: FloatingCallWidgetProps) {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -145,7 +143,6 @@ export function FloatingCallWidget({
           {/* Contact Info */}
           <div className="text-center">
             <h3 className="text-lg font-semibold text-foreground">{contactName}</h3>
-            <p className="text-sm text-muted-foreground mt-1">{contactPhone}</p>
           </div>
 
           {/* Call Duration */}
