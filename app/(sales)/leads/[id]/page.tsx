@@ -281,7 +281,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
   `Location (Google Maps):`,
   `https://maps.google.com/?q=Madhavaram,Chennai`,
   ``,
-  `I'd love to connect with you to discuss the details further. Please let me know a convenient time for us to speak.`,
+  `We would be pleased to discuss the project details with you at your convenience. Kindly let us know a suitable time to connect.`,
   ``,
   `Best Regards,`,
   `SRIRAM BUILDERS`,

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Header } from "@/components/crm/header"
 import { StatsCard } from "@/components/crm/stats-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter} from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/auth-context"
@@ -33,6 +34,7 @@ export default function AdminDashboard() {
   const [executives, setExecutives] = useState<SalesExecutive[]>([])
   const [recentTimeline, setRecentTimeline] = useState<TimelineEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     async function fetchData() {
@@ -89,35 +91,59 @@ export default function AdminDashboard() {
       <Header title="Admin Overview" subtitle={`Welcome back, ${user?.name?.split(" ")[0]}`} />
       
       <div className="flex-1 p-4 md:p-6 space-y-6">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatsCard
-            title="Total Leads"
-            value={stats?.allLeads || 0}
-            icon={Users}
-            variant="primary"
-            trend={{ value: 8, isPositive: true }}
-            onClick={() => window.location.href = `/admin/leads`}
-          />
-          <StatsCard
-            title="New This Month"
-            value={stats?.newLeads || 0}
-            icon={UserPlus}
-            onClick={() => window.location.href = `/leads`}
-          />
-          <StatsCard
-            title="Conversions"
-            value={stats?.booked || 0}
-            icon={CheckCircle2}
-            variant="success"
-          />
-          <StatsCard
-            title="Active Executives"
-            value={stats?.totalSales || 0}
-            icon={Users}
-            variant="warning"
-          />
-        </div>
+       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <StatsCard
+    title="New Leads"
+    value={stats?.newLeads || 0}
+    icon={UserPlus}
+    variant="primary"
+  />
+  <StatsCard
+    title="Today Follow-up"
+    value={stats?.todayFollowUp || 0}
+    icon={Calendar}
+    variant="warning"
+  />
+  <StatsCard
+    title="Missed Follow-up"
+    value={stats?.missedFollowUp || 0}
+    icon={AlertCircle}
+    variant="destructive"
+  />
+  <StatsCard
+    title="Booked"
+    value={stats?.booked || 0}
+    icon={CheckCircle2}
+    variant="success"
+  />
+</div>
+
+{/* Stats Grid — Row 2 */}
+<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <StatsCard
+    title="Re-Engaged"
+    value={stats?.reEngaged || 0}
+    icon={TrendingUp}
+    onClick={() => window.location.href = `/admin/leads?status=reengaged`}
+  />
+  <StatsCard
+    title="Today Leads"
+    value={stats?.todayLeads || 0}
+    icon={Users}
+  />
+  <StatsCard
+    title="Site Visits"
+    value={stats?.siteVisitCompleted || 0}
+    icon={Building}
+  />
+  <StatsCard
+    title="Active Executives"
+    value={stats?.totalSales || 0}
+    icon={Users}
+    variant="warning"
+    onClick={() => window.location.href = `/admin/team`}
+  />
+</div>
 
         <div className="grid md:grid-cols-3 gap-6">
           {/* Recent Leads */}
@@ -143,7 +169,7 @@ export default function AdminDashboard() {
                   </thead>
                   <tbody>
                     {leads.map((lead) => (
-                      <tr key={lead.id} className="border-b last:border-0 hover:bg-secondary/30 transition-colors">
+                      <tr key={lead.id} className="border-b last:border-0 hover:bg-secondary/30 transition-colors" onClick={() => router.push(`/leads/${lead.id}`)}>
                         <td className="py-3">
                           <Link href={`/admin/leads/${lead.id}`} className="font-medium hover:underline">
                             {lead.name}
