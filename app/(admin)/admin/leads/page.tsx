@@ -111,11 +111,10 @@ export default function AdminLeadsPage() {
         lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.phone.includes(searchQuery) ||
         lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lead.id.toLowerCase().includes(searchQuery.toLowerCase())
-      
+        lead.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (lead.source && lead.source.toLowerCase().includes(searchQuery.toLowerCase()))
       const matchesStatus = statusFilter === "all" || lead.status === statusFilter
       const matchesProject = projectFilter === "all" || lead.project === projectFilter
-
       return matchesSearch && matchesStatus && matchesProject
     })
   }, [leads, searchQuery, statusFilter, projectFilter])
@@ -246,9 +245,9 @@ export default function AdminLeadsPage() {
               </TableHeader>
               <TableBody>
                 {paginatedLeads.map((lead) => (
-                  <TableRow key={lead.id} className="cursor-pointer hover:bg-accent/50">
+                <TableRow key={lead.id} className="hover:bg-accent/50 group cursor-pointer transition-colors" onClick={() => router.push(`/admin/leads/${lead.id}`)}>     
                     <TableCell className="font-medium text-primary">
-                      <Link href={`/admin/leads/${lead.id}`}>{lead.id}</Link>
+                    <Link href={`/admin/leads/${lead.id}`}>{lead.id}</Link>
                     </TableCell>
                     <TableCell>
                       <div>
