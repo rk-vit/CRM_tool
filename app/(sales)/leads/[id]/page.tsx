@@ -7,10 +7,10 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { useAuth } from "@/lib/auth-context"
-// import { App } from '@capacitor/app';
-// import { Capacitor } from '@capacitor/core';
-// import { AppLauncher } from '@capacitor/app-launcher';
-// import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { AppLauncher } from '@capacitor/app-launcher';
+import { Browser } from '@capacitor/browser';
 
 import {
   Dialog,
