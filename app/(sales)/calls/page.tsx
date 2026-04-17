@@ -209,7 +209,7 @@ export default function CallsPage() {
                             <p className="font-medium">{call.leadName || "Unknown"}</p>
                             <Badge variant="outline" className="text-xs">{call.leadId}</Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">{call.callerTo}</p>
+                          {/* <p className="text-sm text-muted-foreground">{call.callerTo}</p> */}
                           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                             <span>{format(new Date(call.createdAt), "MMM dd, yyyy hh:mm a")}</span>
                             <span>|</span>
