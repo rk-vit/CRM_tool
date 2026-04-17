@@ -154,7 +154,7 @@ export async function POST(request: Request) {
         ${leadId},
         'call',
         'Outbound Call Initiated',
-        ${`Call placed to ${leadName} (${leadPhone}) via Exotel`},
+        ${`Call placed to ${leadName} via Exotel`},
         ${agentId},
         ${JSON.stringify({ callSid, callerId, from: agentPhone, to: leadPhone })}
       )

@@ -419,19 +419,6 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                 </CardHeader>
  
                 <CardContent className="space-y-5 text-sm px-4 pb-4 sm:px-6 sm:pb-6">
- 
-                  {/* Phone */}
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Phone</p>
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="font-semibold text-base text-foreground">{lead.phone}</p>
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
- 
-                  {/* Email */}
                   <div>
                     <p className="text-medium text-muted-foreground uppercase tracking-wide">Email</p>
                     <div className="flex items-center justify-between mt-1 gap-2">
@@ -646,9 +633,6 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
               Are you sure you want to call{" "}
               <span className="font-semibold text-foreground">{lead.name}</span>{" "}
               at{" "}
-              <span className="font-semibold text-foreground">
-                {lead.phone}
-              </span>
               ?
             </DialogDescription>
           </DialogHeader>
@@ -761,7 +745,6 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                 <p className="text-white font-semibold text-base">
                   {lead.name}
                 </p>
-                <p className="text-slate-400 text-xs font-mono">{lead.phone}</p>
               </div>
  
               {/* Timer */}

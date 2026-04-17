@@ -248,7 +248,6 @@ export default function LeadsPage() {
         <TableRow className="bg-secondary/50">
           <TableHead className="w-[100px]">ID</TableHead>
           <TableHead>Name</TableHead>
-          <TableHead className="hidden md:table-cell">Phone</TableHead>
           <TableHead className="hidden lg:table-cell">Project</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="w-[80px]">Actions</TableHead>
@@ -268,11 +267,7 @@ export default function LeadsPage() {
             <TableCell>
               <div className="flex flex-col">
                 <p className="font-medium text-sm">{lead.name}</p>
-                <p className="text-[10px] text-muted-foreground md:hidden">{lead.phone}</p>
               </div>
-            </TableCell>
-            <TableCell className="hidden md:table-cell text-sm">
-              {lead.phone}
             </TableCell>
             <TableCell className="hidden lg:table-cell text-xs">
               <Badge variant="outline" className="font-normal">{lead.project}</Badge>
@@ -328,7 +323,6 @@ export default function LeadsPage() {
                     <Badge variant="secondary" className={getStatusColor(lead.status)}>{lead.status}</Badge>
                   </div>
                   <div className="space-y-1 text-sm text-muted-foreground mb-4">
-                    <div className="flex items-center gap-2"><Phone className="h-3 w-3" /> {lead.phone}</div>
                     <div className="flex items-center gap-2 truncate"><Mail className="h-3 w-3" /> {lead.email}</div>
                     <Badge variant="outline" className="mt-2 text-[10px]">{lead.project}</Badge>
                   </div>
@@ -345,7 +339,6 @@ export default function LeadsPage() {
         {showCallInterface && selectedLead && (
           <FloatingCallWidget
             contactName={selectedLead.name}
-            contactPhone={selectedLead.phone}
             onClose={() => setShowCallInterface(false)}
           />
         )}
