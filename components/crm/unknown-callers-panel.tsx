@@ -186,7 +186,14 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
                           <Phone className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-sm">{caller.phone}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-sm">{caller.phone}</p>
+                            {caller.callCount > 1 && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-500 text-amber-600 dark:text-amber-400">
+                                {caller.callCount} calls
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             {format(new Date(caller.createdAt), "MMM dd, hh:mm a")}
                           </p>

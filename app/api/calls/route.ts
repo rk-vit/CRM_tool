@@ -6,10 +6,21 @@ export async function GET(request: Request) {
   const assignedTo = searchParams.get("assignedTo");
 
   try {
-    let query = `
+    // Build the call_logs query
+    let callLogsQuery = `
       SELECT 
-        c.*, 
-        l.name as "leadName"
+        c.id,
+        c.lead_id,
+        l.name as "leadName",
+        c.caller_number,
+        c.caller_to,
+        c.duration,
+        c.direction,
+        c.status,
+        c.recording_url,
+        c.assigned_to,
+        c.created_at,
+        'known' as caller_type
       FROM call_logs c
       LEFT JOIN leads l ON c.lead_id = l.id
       WHERE 1=1
@@ -18,12 +29,34 @@ export async function GET(request: Request) {
 
     if (assignedTo) {
       params.push(assignedTo);
-      query += ` AND c.assigned_to = $${params.length}`;
+      callLogsQuery += ` AND c.assigned_to = $${params.length}`;
     }
 
-    query += ` ORDER BY c.created_at DESC`;
+    // UNION with unknown_callers (unreviewed only)
+    const unionQuery = `
+      (${callLogsQuery})
+      UNION ALL
+      (
+        SELECT
+          u.id,
+          NULL as lead_id,
+          'Unknown Caller' as "leadName",
+          u.phone as caller_number,
+          NULL as caller_to,
+          u.call_duration as duration,
+          'inbound' as direction,
+          u.call_status as status,
+          u.recording_url,
+          NULL as assigned_to,
+          u.created_at,
+          'unknown' as caller_type
+        FROM unknown_callers u
+        WHERE u.reviewed = false
+      )
+      ORDER BY created_at DESC
+    `;
 
-    const calls = await sql.query(query, params);
+    const calls = await sql.query(unionQuery, params);
 
     const mappedCalls = calls.map((c: any) => ({
       id: c.id,
@@ -36,7 +69,8 @@ export async function GET(request: Request) {
       status: c.status,
       recordingUrl: c.recording_url,
       assignedTo: c.assigned_to,
-      createdAt: c.created_at
+      createdAt: c.created_at,
+      callerType: c.caller_type,
     }));
 
     return NextResponse.json(mappedCalls);

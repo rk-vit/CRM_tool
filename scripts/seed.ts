@@ -149,12 +149,19 @@ async function main() {
         exotel_call_sid TEXT,
         call_duration INTEGER DEFAULT 0,
         call_status TEXT DEFAULT 'no_answer',
+        call_count INTEGER DEFAULT 1,
         recording_url TEXT,
         reviewed BOOLEAN DEFAULT false,
         discarded BOOLEAN DEFAULT false,
-        converted_lead_id TEXT REFERENCES leads(id),
+        converted_lead_id TEXT REFERENCES leads(id) ON DELETE SET NULL,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+    `;
+
+    await sql`
+      CREATE UNIQUE INDEX idx_unknown_callers_phone_unreviewed
+      ON unknown_callers (phone)
+      WHERE reviewed = false;
     `;
 
     await sql`
