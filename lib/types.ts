@@ -104,6 +104,7 @@ export interface UnknownCaller {
   exotelCallSid?: string
   callDuration: number
   callStatus: string
+  callCount: number
   recordingUrl?: string
   reviewed: boolean
   discarded: boolean
