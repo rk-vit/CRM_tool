@@ -57,10 +57,10 @@ export default function CallsPage() {
 
   const filteredCalls = calls.filter((call) => {
     const matchesSearch = 
-      call.callerTo.includes(searchQuery) ||
-      call.callerNumber.includes(searchQuery) ||
-      call.leadId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (call.leadName?.toLowerCase().includes(searchQuery.toLowerCase()))
+      (call.callerTo || '').includes(searchQuery) ||
+      (call.callerNumber || '').includes(searchQuery) ||
+      (call.leadId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (call.leadName || '').toLowerCase().includes(searchQuery.toLowerCase())
     
     const matchesDirection = directionFilter === "all" || call.direction === directionFilter
     const matchesStatus = statusFilter === "all" || call.status === statusFilter
@@ -206,10 +206,16 @@ export default function CallsPage() {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{call.leadName || "Unknown"}</p>
-                            <Badge variant="outline" className="text-xs">{call.leadId}</Badge>
+                            <p className={`font-medium ${!call.leadId ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                              {call.leadName || "Unknown Caller"}
+                            </p>
+                            {call.leadId && (
+                              <Badge variant="outline" className="text-xs">{call.leadId}</Badge>
+                            )}
+                            {!call.leadId && (
+                              <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 dark:text-amber-400">Unregistered</Badge>
+                            )}
                           </div>
-                          {/* <p className="text-sm text-muted-foreground">{call.callerTo}</p> */}
                           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                             <span>{format(new Date(call.createdAt), "MMM dd, yyyy hh:mm a")}</span>
                             <span>|</span>
