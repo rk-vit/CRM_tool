@@ -169,11 +169,9 @@ export default function AdminDashboard() {
                   </thead>
                   <tbody>
                     {leads.map((lead) => (
-                      <tr key={lead.id} className="border-b last:border-0 hover:bg-secondary/30 transition-colors" onClick={() => router.push(`/leads/${lead.id}`)}>
+                      <tr key={lead.id} className="border-b last:border-0 hover:bg-secondary/30 transition-colors" onClick={() => router.push(`admin/leads/${lead.id}`)}>
                         <td className="py-3">
-                          <Link href={`/admin/leads/${lead.id}`} className="font-medium hover:underline">
                             {lead.name}
-                          </Link>
                         </td>
                         <td className="py-3 text-muted-foreground">{lead.project}</td>
                         <td className="py-3">
