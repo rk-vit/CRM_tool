@@ -47,6 +47,8 @@ export function StatsCard({ title, value, icon: Icon, trend, variant = "default"
     if (titleLower.includes("follow-up")) return `${basePath}/leads?status=follow_up`
     if (titleLower.includes("conversion") || titleLower.includes("booked")) return `${basePath}/leads?status=won`
     if (titleLower.includes("calls")) return `${basePath}/calls`
+    if (titleLower.includes("engaged")) return `${basePath}/leads?status=reengaged`
+    if (titleLower.includes("executives")) return `${basePath}/team`
     return null
   }
 
