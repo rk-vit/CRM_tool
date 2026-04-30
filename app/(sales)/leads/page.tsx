@@ -1,75 +1,151 @@
 "use client"
- 
-import { useState, useEffect } from "react"
-import { Header } from "@/components/crm/header"
-import { StatsCard } from "@/components/crm/stats-card"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/lib/auth-context"
-import {
-  Users,
-  UserPlus,
-  Calendar,
-  AlertCircle,
-  TrendingUp,
-  Building,
-  CheckCircle2,
-  Phone,
-  Clock,
-  ArrowRight,
-  Loader2
-} from "lucide-react"
+
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
-import { formatDistanceToNow } from "date-fns"
-import type { Lead, TimelineEvent, DashboardStats } from "@/lib/types"
-import { useRouter } from "next/navigation"
-const scrollToSection = (id: string) => {
-  const el = document.getElementById(id);
-  if (el) {
-    el.scrollIntoView({ behavior: "smooth" });
-  }
-};
-const today = new Date();
-today.setHours(0, 0, 0, 0);
-const todayString = new Date().toISOString().split("T")[0];
-export default function SalesDashboard() {
-  const router = useRouter();
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
+import { Header } from "@/components/crm/header"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog"
+import { useAuth } from "@/lib/auth-context"
+import type { Lead, LeadStatus } from "@/lib/types"
+import {
+  Search,
+  Filter,
+  Phone,
+  Mail,
+  MoreVertical,
+  ChevronLeft,
+  ChevronRight,
+  Grid,
+  List,
+  Loader2,
+  UserPlus
+} from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { format } from "date-fns"
+import { FloatingCallWidget } from "../call_widget/call_widget"
+
+const statusFilters: { value: LeadStatus | "all"; label: string }[] = [
+  { value: "all", label: "All Leads" },
+  { value: "new", label: "New" },
+  { value: "contacted", label: "Contacted" },
+  { value: "qualified", label: "Qualified" },
+  { value: "negotiation", label: "Negotiation" },
+  { value: "won", label: "Won" },
+  { value: "lost", label: "Lost" },
+  { value: "reengaged", label: "Re-Engaged" },
+]
+
+export default function LeadsPage() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const statusParam = searchParams.get("status") as LeadStatus | "all" | null
+  
   const { user } = useAuth()
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [myLeads, setMyLeads] = useState<Lead[]>([])
-  const [recentTimeline, setRecentTimeline] = useState<TimelineEvent[]>([])
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [projects, setProjects] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
- 
-  useEffect(() => {
-    async function fetchData() {
-      if (!user?.id) return
-      
-      try {
-        setLoading(true)
-        const [statsRes, leadsRes, timelineRes] = await Promise.all([
-          fetch(`/api/dashboard/stats?assignedTo=${user.id}`),
-          fetch(`/api/leads?assignedTo=${user.id}&limit=5`),
-          fetch(`/api/timeline?limit=5`)
-        ])
-        
-        const statsData = await statsRes.json()
-        const leadsData = await leadsRes.json()
-        const timelineData = await timelineRes.json()
-        
-        setStats(statsData)
-        setMyLeads(Array.isArray(leadsData) ? leadsData : [])
-        setRecentTimeline(Array.isArray(timelineData) ? timelineData : [])
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error)
-      } finally {
-        setLoading(false)
-      }
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">(statusParam || "all")
+  const [openConfirm, setOpenConfirm] = useState(false)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [projectFilter, setProjectFilter] = useState<string>("all")
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [showCallInterface, setShowCallInterface] = useState(false)
+  
+  const itemsPerPage = 10
+
+  const fetchLeadsData = async () => {
+    if (!user?.id) return
+    try {
+      setLoading(true)
+      const [leadsRes, projectsRes] = await Promise.all([
+        fetch(`/api/leads?assignedTo=${user.id}`),
+        fetch("/api/projects")
+      ])
+      const leadsData = await leadsRes.json()
+      const projectsData = await projectsRes.json()
+      if (Array.isArray(leadsData)) setLeads(leadsData)
+      if (Array.isArray(projectsData)) setProjects(projectsData)
+    } catch (error) {
+      console.error("Error fetching data:", error)
+    } finally {
+      setLoading(false)
     }
- 
-    fetchData()
+  }
+
+  useEffect(() => {
+    if (statusParam) setStatusFilter(statusParam)
+  }, [statusParam])
+
+  useEffect(() => {
+    fetchLeadsData()
   }, [user?.id])
- 
+
+  const filteredLeads = useMemo(() => {
+    return leads.filter((lead) => {
+      const matchesSearch = 
+        lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.phone.includes(searchQuery) ||
+        lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (lead.source && lead.source.toLowerCase().includes(searchQuery.toLowerCase()))
+      const matchesStatus = statusFilter === "all" || lead.status === statusFilter
+      const matchesProject = projectFilter === "all" || lead.project === projectFilter
+      return matchesSearch && matchesStatus && matchesProject
+    })
+  }, [leads, searchQuery, statusFilter, projectFilter])
+
+  const paginatedLeads = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage
+    return filteredLeads.slice(start, start + itemsPerPage)
+  }, [filteredLeads, currentPage])
+
+  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage)
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: leads.length }
+    leads.forEach(lead => {
+      counts[lead.status] = (counts[lead.status] || 0) + 1
+    })
+    return counts
+  }, [leads])
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       new: "bg-chart-1 text-white",
@@ -77,236 +153,262 @@ export default function SalesDashboard() {
       qualified: "bg-green-600 text-white",
       negotiation: "bg-orange-500 text-white",
       won: "bg-emerald-600 text-white",
-      lost: "bg-destructive text-destructive-foreground"
+      lost: "bg-destructive text-destructive-foreground",
+      reengaged: "bg-purple-600 text-white",
     }
-    return colors[status] || "bg-secondary text-secondary-foreground"
+    return colors[status.toLowerCase()] || "bg-secondary text-secondary-foreground"
   }
- 
-  if (loading && !stats) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+
+  const getSubStatusColor = (subStatus: string) => {
+    const colors: Record<string, string> = {
+      hot: "bg-destructive/10 text-destructive border-destructive/20",
+      warm: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+      cold: "bg-blue-500/10 text-blue-600 border-blue-500/20"
+    }
+    return colors[subStatus] || ""
   }
- 
+
+  if (loading && leads.length === 0) {
+    return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+  }
+
   return (
-    <div className="flex flex-col min-h-screen overflow-x-hidden w-full">
-      <Header title="Dashboard" subtitle={`Welcome back, ${user?.name?.split(" ")[0]}`} />
-      
-      <div className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6 max-w-full overflow-x-hidden">
-        {/* Stats Grid — 2 cols on mobile, 4 on md+ */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <StatsCard
-            title="New Leads"
-            value={stats?.newLeads || 0}
-            icon={UserPlus}
-            variant="primary"
-          />
-          <StatsCard
-            title="Today Follow-up"
-            value={stats?.todayFollowUp || 0}
-            icon={Calendar}
-            variant="warning"
-            onClick={() => scrollToSection("today-follow")}
-          />
-          <StatsCard
-            title="Missed Follow-up"
-            value={stats?.missedFollowUp || 0}
-            icon={AlertCircle}
-            variant="destructive"
-            onClick={() => scrollToSection("missed-follow")}
-          />
-          <StatsCard
-            title="Booked"
-            value={stats?.booked || 0}
-            icon={CheckCircle2}
-            variant="success"
-          />
+    <div className="flex flex-col min-h-screen">
+      <Header title="Leads" subtitle={`${filteredLeads.length} leads assigned to you`} />
+
+      <div className="flex-1 p-4 md:p-6 space-y-4">
+        <Tabs 
+          value={statusFilter} 
+          onValueChange={(v) => {
+            setStatusFilter(v as LeadStatus | "all")
+            const params = new URLSearchParams(searchParams.toString())
+            if (v === "all") params.delete("status")
+            else params.set("status", v)
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+          }}
+        >
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1 bg-secondary">
+            {statusFilters.map((filter) => (
+              <TabsTrigger
+                key={filter.value}
+                value={filter.value}
+                className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                {filter.label}
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{statusCounts[filter.value] || 0}</Badge>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search leads..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={projectFilter} onValueChange={setProjectFilter}>
+              <SelectTrigger className="w-[150px]"><Filter className="h-4 w-4 mr-2" /><SelectValue placeholder="Project" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Projects</SelectItem>
+                {projects.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary"><UserPlus className="h-4 w-4 mr-2" /> Add Lead</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] sm:max-w-md rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add Manual Lead</DialogTitle>
+                  <DialogDescription>Create a manual entry for walk-in clients.</DialogDescription>
+                </DialogHeader>
+                <AddLeadForm onSuccess={() => { setAddDialogOpen(false); fetchLeadsData() }} />
+              </DialogContent>
+            </Dialog>
+
+            <div className="hidden md:flex border rounded-lg overflow-hidden">
+              <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("list")} className="rounded-none"><List className="h-4 w-4" /></Button>
+              <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="icon" onClick={() => setViewMode("grid")} className="rounded-none"><Grid className="h-4 w-4" /></Button>
+            </div>
+          </div>
         </div>
 
-        {/* Second Row Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 gap-4">
-          <StatsCard
-            title="Re-Engaged"
-            value={stats?.reEngaged || 0}
-             onClick={() => router.push("/leads?status=reengaged")}
-
-            icon={TrendingUp}
-          />
-          <StatsCard
-            title="Today Leads"
-            value={stats?.todayLeads || 0}
-            icon={Users}
-          />
-          <StatsCard
-            title="Site Visits"
-            value={stats?.siteVisitCompleted || 0}
-            icon={Building}
-          />
-          <StatsCard
-            title="All Leads"
-            value={stats?.allLeads || 0}
-            icon={Users}
-          />
-        </div>
- 
-        {/* Main Content Grid — stacked on mobile, side-by-side on md+ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {/* Recent Leads */}
+        {viewMode === "list" ? (
           <Card className="border-0 shadow-sm overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 sm:px-6">
-              <CardTitle className="text-base sm:text-lg font-semibold">My Recent Leads</CardTitle>
-              <Button variant="ghost" size="sm" asChild className="shrink-0">
-                <Link href="/leads" className="text-primary">
-                  View All <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-2 px-4 pb-4 sm:px-6 sm:pb-6">
-              {myLeads.slice(0, 7).map((lead) => (
-                <Link
-                  key={lead.id}
-                  href={`/leads/${lead.id}`}
-                  className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors gap-2"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-sm truncate max-w-[120px] sm:max-w-none">{lead.name}</p>
-                      <Badge variant="outline" className="font-normal text-[10px] h-4 px-1.5 text-muted-foreground shrink-0">
-                        {lead.id}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">{lead.project}</p>
-                  </div>
-                  <Badge className={`${getStatusColor(lead.status)} shrink-0 text-xs`}>
-                    {lead.status.replace("_", " ")}
+  <div className="overflow-x-auto">
+    <Table>
+      <TableHeader>
+        <TableRow className="bg-secondary/50">
+          <TableHead className="w-[100px]">ID</TableHead>
+          <TableHead>Name</TableHead>
+          <TableHead className="hidden lg:table-cell">Project</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="w-[80px]">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {paginatedLeads.map((lead) => (
+          <TableRow 
+            key={lead.id} 
+            className="hover:bg-accent/50 group cursor-pointer transition-colors"
+            // Routing when the row is clicked
+            onClick={() => router.push(`/leads/${lead.id}`)}
+          >
+            <TableCell className="font-medium text-primary font-mono text-xs">
+              {lead.id}
+            </TableCell>
+            <TableCell>
+              <div className="flex flex-col">
+                <p className="font-medium text-sm">{lead.name}</p>
+              </div>
+            </TableCell>
+            <TableCell className="hidden lg:table-cell text-xs">
+              <Badge variant="outline" className="font-normal">{lead.project}</Badge>
+            </TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className={`${getStatusColor(lead.status)} text-[10px] uppercase px-2 py-0`}>
+                  {lead.status}
+                </Badge>
+                {lead.subStatus && (
+                  <Badge variant="outline" className={`${getSubStatusColor(lead.subStatus)} text-[10px] uppercase px-2 py-0`}>
+                    {lead.subStatus}
                   </Badge>
-                </Link>
-              ))}
-              {myLeads.length === 0 && (
-                <p className="text-center py-4 text-sm text-muted-foreground">No recent leads found.</p>
-              )}
-            </CardContent>
-          </Card>
- 
-          {/* Recent Activity */}
-          <Card className="border-0 shadow-sm overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 sm:px-6">
-              <CardTitle className="text-base sm:text-lg font-semibold">Recent Activity</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-            </CardHeader>
-            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-              <div className="space-y-4">
-                {recentTimeline.map((event, index) => (
-                  <div key={event.id} className="flex gap-3">
-                    <div className="relative flex flex-col items-center shrink-0">
-                      <div className={`h-2 w-2 rounded-full mt-1.5 ${
-                        event.type === "call" ? "bg-green-500" :
-                        event.type === "email" ? "bg-blue-500" :
-                        event.type === "status_change" ? "bg-orange-500" :
-                        "bg-muted-foreground"
-                      }`} />
-                      {index < recentTimeline.length - 1 && (
-                        <div className="flex-1 w-px bg-border mt-1" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0 pb-4">
-                      <p className="text-sm font-medium truncate">{event.title}</p>
-                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-normal text-muted-foreground">
-                        {event.leadId}
-                      </Badge>
-                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                        {event.description}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                {recentTimeline.length === 0 && (
-                  <p className="text-center py-4 text-sm text-muted-foreground">No recent activity found.</p>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-
-        {/* Today's Schedule */}
-        <Card id= "today-follow" className="border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold">Today&apos;s Follow-ups</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myLeads.filter(l => l.followUpDate?.startsWith(todayString)).slice(0, 6).map((lead) => (
-                <Link
-                  href={`/leads/${lead.id}`}
-                  key={lead.id}
-                  className="flex items-center gap-3 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                    {lead.name.split(" ").map(n => n[0]).join("")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{lead.name}</p>
-                    {/*Don't show phone number as of now
-                    <p className="text-xs text-muted-foreground">{lead.phone}</p>
-                    */}
-                  </div>
-                  {/*Don't show call button as of now
-                  <Button size="sm" variant="outline" asChild>
-                    <Link href={`tel:${lead.phone}`}>
-                      <Phone className="h-4 w-4" />
-                    </Link>
+            </TableCell>
+            {/* We use stopPropagation here so clicking the button doesn't trigger the row's router.push */}
+            <TableCell onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
                   </Button>
-                  */}
-                </Link>
-              ))}
-              {myLeads.filter(l => l.followUpDate).length === 0 && (
-                <p className="col-span-full text-center py-4 text-sm text-muted-foreground">No follow-ups scheduled for today.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        {/* Missed Follow Ups */}
-        <Card id="missed-follow" className="border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold">Missed Follow Ups</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myLeads
-                .filter(l => {
-                  if (!l.followUpDate) return false;
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/leads/${lead.id}`}>View Details</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => { setSelectedLead(lead); setOpenConfirm(true) }} 
+                    className="text-green-600"
+                  >
+                    <Phone className="h-4 w-4 mr-2" /> Call Lead
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </div>
+</Card>        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedLeads.map((lead) => (
+              <Card key={lead.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <Link href={`/leads/${lead.id}`} className="hover:underline">
+                      <p className="font-bold">{lead.name}</p>
+                      <p className="text-[10px] font-mono text-muted-foreground">{lead.id}</p>
+                    </Link>
+                    <Badge variant="secondary" className={getStatusColor(lead.status)}>{lead.status}</Badge>
+                  </div>
+                  <div className="space-y-1 text-sm text-muted-foreground mb-4">
+                    <div className="flex items-center gap-2 truncate"><Mail className="h-3 w-3" /> {lead.email}</div>
+                    <Badge variant="outline" className="mt-2 text-[10px]">{lead.project}</Badge>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => { setSelectedLead(lead); setOpenConfirm(true) }}><Phone className="h-3 w-3 mr-2" /> Call</Button>
+                    <Button size="sm" variant="outline" className="flex-1" asChild><Link href={`/leads/${lead.id}`}>Details</Link></Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
-                  const followUp = new Date(l.followUpDate);
-                  return followUp < today;
-                })
-                .slice(0, 6)
-                .map((lead) => (
-                <Link
-                  href={`/leads/${lead.id}`}
-                  key={lead.id}
-                  className="flex items-center gap-3 p-3 sm:p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                    {lead.name.split(" ").map(n => n[0]).join("")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{lead.name}</p>
-                  </div>
-                </Link>
-              ))}
-              {myLeads.filter(l => l.followUpDate).length === 0 && (
-                <p className="col-span-full text-center py-4 text-sm text-muted-foreground">No follow-ups scheduled for today.</p>
-              )}
+        {showCallInterface && selectedLead && (
+          <FloatingCallWidget
+            contactName={selectedLead.name}
+            onClose={() => setShowCallInterface(false)}
+          />
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4">
+            <p className="text-xs text-muted-foreground">Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredLeads.length)} of {filteredLeads.length}</p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /></Button>
+              <span className="text-xs font-medium">{currentPage} / {totalPages}</span>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}><ChevronRight className="h-4 w-4" /></Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
+
+      {openConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-xl">
+            <h2 className="text-lg font-bold mb-2">Confirm Call</h2>
+            <p className="text-sm text-muted-foreground mb-6">Initiating call to <b>{selectedLead?.name}</b>. You will receive an incoming call on your device first.</p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setOpenConfirm(false)}>Cancel</Button>
+              <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                setOpenConfirm(false)
+                setShowCallInterface(true)
+                await fetch('/api/calls/connect', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ leadId: selectedLead?.id })
+                })
+              }}>Call Now</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+function AddLeadForm({ onSuccess }: { onSuccess: () => void }) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [form, setForm] = useState({ name: "", phone: "", email: "", project: "", source: "Walk-in" })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    try {
+      const res = await fetch("/api/leads/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      })
+      if (res.ok) onSuccess()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+      <div className="space-y-1"><label className="text-[10px] font-bold uppercase text-muted-foreground">Full Name</label><Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required /></div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1"><label className="text-[10px] font-bold uppercase text-muted-foreground">Phone</label><Input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required /></div>
+        <div className="space-y-1"><label className="text-[10px] font-bold uppercase text-muted-foreground">Email</label><Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>
+      </div>
+      <div className="space-y-1"><label className="text-[10px] font-bold uppercase text-muted-foreground">Project</label><Input value={form.project} onChange={e => setForm({...form, project: e.target.value})} /></div>
+      <Button type="submit" className="w-full h-10 mt-2" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Save Lead"}</Button>
+    </form>
   )
 }
