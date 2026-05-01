@@ -121,7 +121,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Analytics" subtitle="Performance metrics and insights" />
+      <Header title="Analytics" subtitle="Performance metrics" />
 
       <div className="flex-1 p-4 md:p-6 space-y-6">
         {/* KPI Summary */}

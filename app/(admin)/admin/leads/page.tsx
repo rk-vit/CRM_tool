@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { format } from "date-fns"
+import downloadLeadsCSV from "@/lib/file-download"
 
 const statusFilters: { value: LeadStatus | "all"; label: string }[] = [
   { value: "all", label: "All Leads" },
@@ -156,7 +157,7 @@ export default function AdminLeadsPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="All Leads" subtitle={`Managing ${filteredLeads.length} total leads in the system`} />
+      <Header title="All Leads" subtitle={`${filteredLeads.length} leads `} />
 
       <div className="flex-1 p-4 md:p-6 space-y-4">
         {/* Actions Row */}
@@ -165,7 +166,7 @@ export default function AdminLeadsPage() {
             <Button>
               <UserPlus className="h-4 w-4 mr-2" /> Add New Lead
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => downloadLeadsCSV(statusFilter)}>
               <Download className="h-4 w-4 mr-2" /> Export
             </Button>
           </div>
