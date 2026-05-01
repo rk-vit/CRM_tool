@@ -1,5 +1,4 @@
 "use client";
-import { sql } from "@/lib/db";
 
 function csvmaker(data: any[]) {
     const headers = Object.keys(data[0]).join(",") + "\n";
@@ -27,21 +26,21 @@ async function downloadLeadsCSV(filter: string) {
         let leadsData: any[] = [];
 
         if (filter === "all") {
-            leadsData = await sql`SELECT * FROM leads`;
+            leadsData = await fetch('/api/leads').then(res => res.json());
         } else if (filter === "new") {
-            leadsData = await sql`SELECT * FROM leads WHERE status = 'new'`;
+            leadsData = await fetch(`/api/leads?status=new`).then(res => res.json());
         } else if (filter === "contacted") {
-            leadsData = await sql`SELECT * FROM leads WHERE status = 'contacted'`;
+            leadsData = await fetch(`/api/leads?status=contacted`).then(res => res.json());
         } else if (filter === "qualified") {
-            leadsData = await sql`SELECT * FROM leads WHERE status = 'qualified'`;
+            leadsData = await fetch(`/api/leads?status=qualified`).then(res => res.json());
         } else if (filter === "reengaged") {
-            leadsData = await sql`SELECT * FROM leads WHERE status = 'reengaged'`;
+            leadsData = await fetch(`/api/leads?status=reengaged`).then(res => res.json());
         } else if (filter === "negotiation") {
-            leadsData = await sql`SELECT * FROM leads WHERE status = 'negotiation'`;
+            leadsData = await fetch(`/api/leads?status=negotiation`).then(res => res.json());
         } else if (filter === "won") {
-            leadsData = await sql`SELECT * FROM leads WHERE status = 'won'`;
+            leadsData = await fetch(`/api/leads?status=won`).then(res => res.json());
         } else if (filter === "lost") {
-            leadsData = await sql`SELECT * FROM leads WHERE status = 'lost'`;
+            leadsData = await fetch(`/api/leads?status=lost`).then(res => res.json());
         }
 
         download(leadsData);
