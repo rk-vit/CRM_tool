@@ -72,7 +72,7 @@ export default function TeamPage() {
     <div className="flex flex-col min-h-screen">
       <Header 
         title="Team Management" 
-        subtitle="Manage sales executives and track their individual performance" 
+        subtitle="Manage Sales Executives" 
       />
 
       <div className="flex-1 p-4 md:p-6 space-y-6">
