@@ -193,57 +193,64 @@ export default function CallsPage() {
               ) : (
                 filteredCalls.map((call) => {
                   return (
-                    <div key={call.id} className="flex items-center justify-between p-4 hover:bg-accent/50 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
-                          call.direction === "outbound" ? "bg-success/10 text-success" : "bg-chart-1/10 text-chart-1"
-                        }`}>
-                          {call.direction === "outbound" ? (
-                            <PhoneOutgoing className="h-5 w-5" />
-                          ) : (
-                            <PhoneIncoming className="h-5 w-5" />
-                          )}
+                    <div key={call.id} className="flex flex-col p-4 gap-2 hover:bg-accent/50 transition-colors">
+                      {/* Call details row - unchanged layout */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 ${
+                            call.direction === "outbound" ? "bg-success/10 text-success" : "bg-chart-1/10 text-chart-1"
+                          }`}>
+                            {call.direction === "outbound" ? (
+                              <PhoneOutgoing className="h-5 w-5" />
+                            ) : (
+                              <PhoneIncoming className="h-5 w-5" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className={`font-medium ${!call.leadId ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                                {call.leadName || "Unknown Caller"}
+                              </p>
+                              {call.leadId && (
+                                <Badge variant="outline" className="text-xs">{call.leadId}</Badge>
+                              )}
+                              {!call.leadId && (
+                                <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 dark:text-amber-400">Unregistered</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                              <span>{format(new Date(call.createdAt), "MMM dd, yyyy hh:mm a")}</span>
+                              <span>|</span>
+                              <span>{formatDuration(call.duration)}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className={`font-medium ${!call.leadId ? 'text-amber-600 dark:text-amber-400' : ''}`}>
-                              {call.leadName || "Unknown Caller"}
-                            </p>
-                            {call.leadId && (
-                              <Badge variant="outline" className="text-xs">{call.leadId}</Badge>
-                            )}
-                            {!call.leadId && (
-                              <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 dark:text-amber-400">Unregistered</Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                            <span>{format(new Date(call.createdAt), "MMM dd, yyyy hh:mm a")}</span>
-                            <span>|</span>
-                            <span>{formatDuration(call.duration)}</span>
-                          </div>
+                        <div className="flex items-center gap-3 shrink-0 ml-2">
+                          <Badge variant="outline" className={`hidden sm:flex ${
+                            call.direction === "outbound" ? "text-success border-success" : "text-chart-1 border-chart-1"
+                          }`}>
+                            {call.direction}
+                          </Badge>
+                          <Badge variant="outline" className={
+                            call.status === "answered" ? "text-success border-success" :
+                            call.status === "missed" ? "text-destructive border-destructive" :
+                            ""
+                          }>
+                            {call.status}
+                          </Badge>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className={`hidden sm:flex ${
-                          call.direction === "outbound" ? "text-success border-success" : "text-chart-1 border-chart-1"
-                        }`}>
-                          {call.direction}
-                        </Badge>
-                        <Badge variant="outline" className={
-                          call.status === "answered" ? "text-success border-success" :
-                          call.status === "missed" ? "text-destructive border-destructive" :
-                          ""
-                        }>
-                          {call.status}
-                        </Badge>
-                        {call.recordingUrl && (
+
+                      {/* Recording - separate row below, indented to align with text */}
+                      {call.recordingUrl && (
+                        <div className="pl-16">
                           <audio
                             controls
                             src={`/api/calls/recording?url=${encodeURIComponent(call.recordingUrl)}`}
-                            className="h-8"
+                            className="w-full h-8"
                           />
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })
