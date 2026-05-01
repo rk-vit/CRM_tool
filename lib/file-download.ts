@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import {Capacitor} from "@capacitor/core";
 
 function csvmaker(data:any[]) {
     const headers = Object.keys(data[0]).join(",") + "\n";
@@ -16,6 +17,9 @@ const download = (data:any[]) => {
 }
 
 async function downloadLeadsCSV(filter:string) {
+    if(Capacitor.isNativePlatform()){
+        return;
+    }
     let leadsData:any[] = [];
     if(filter === "all"){
         leadsData = await sql`SELECT * FROM leads`;
