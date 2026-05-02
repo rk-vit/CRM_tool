@@ -143,8 +143,8 @@ export default function AdminDashboard() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full min-w-0 [&>*]:min-w-0">
-          <Card className="md:col-span-2 border-0 shadow-sm">
+        <div className="flex flex-col gap-6 w-full min-w-0 [&>*]:min-w-0">
+        <Card className="col-span-1 md:col-span-2 border-0 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-semibold">Latest Leads Across Team</CardTitle>
               <Button variant="ghost" size="sm" asChild>
@@ -157,17 +157,19 @@ export default function AdminDashboard() {
               <div className="overflow-x-auto rounded-lg w-full max-w-full">
                 <table className="min-w-0 w-full text-xs md:text-sm table-fixed">
                   <colgroup>
-                    <col className="w-[28%]" />
-                    <col className="w-[32%]" />
                     <col className="w-[22%]" />
-                    <col className="w-[18%]" />
+                    <col className="w-[25%]" />
+                    <col className="w-[20%]" />
+                    <col className="w-[15%]" />
+                    <col className="hidden md:table-column w-[18%]" />
                   </colgroup>
                   <thead>
-                    <tr className="text-muted-foreground border-b text-xs md:text-sm">
-                      <th className="text-left py-2 font-medium">Lead Name</th>
-                      <th className="text-left py-2 font-medium">Project</th>
-                      <th className="text-left py-2 font-medium">Assigned To</th>
-                      <th className="text-left py-2 font-medium text-right">Status</th>
+                    <tr className="text-muted-foreground border-b text-xs">
+                      <th className="text-left py-2 font-medium pr-3">Lead Name</th>
+                      <th className="text-left py-2 font-medium pr-3">Project</th>
+                      <th className="text-left py-2 font-medium pr-3">Assigned</th>
+                      <th className="text-left py-2 font-medium pr-3">Source</th>
+                      <th className="hidden md:table-cell text-right py-2 font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -177,18 +179,21 @@ export default function AdminDashboard() {
                         className="cursor-pointer border-b last:border-0 hover:bg-secondary/30 active:bg-secondary/50 transition-colors"
                         onClick={() => router.push(`admin/leads/${lead.id}`)}
                       >
-                        <td className="py-2 md:py-3 truncate overflow-hidden max-w-0">
+                        <td className="py-2 md:py-3 pr-3 truncate overflow-hidden max-w-0">
                           {lead.name}
                         </td>
-                        <td className="py-2 md:py-3 truncate overflow-hidden max-w-0 text-muted-foreground">
+                        <td className="py-2 md:py-3 pr-3 truncate overflow-hidden max-w-0 text-muted-foreground">
                           {lead.project}
                         </td>
-                        <td className="py-2 md:py-3 overflow-hidden max-w-0">
-                          <Badge className="font-normal text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 truncate max-w-full block">
+                        <td className="py-2 md:py-3 pr-3 overflow-hidden max-w-0">
+                          <Badge className="font-normal text-[10px] md:text-xs px-1.5 py-0.5 truncate max-w-full block">
                             {lead.assignedToName || "Unassigned"}
                           </Badge>
                         </td>
-                        <td className="py-2 md:py-3 text-right">
+                        <td className="py-2 md:py-3 pr-3 text-muted-foreground truncate overflow-hidden max-w-0">
+                          {lead.source || "—"}
+                        </td>
+                        <td className="hidden md:table-cell py-2 md:py-3 text-right">
                           <Badge className={`${getStatusColor(lead.status)} text-[10px] md:text-xs px-1.5 md:px-2 py-0.5`}>
                             {lead.status}
                           </Badge>
@@ -203,8 +208,8 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="border-0 shadow-sm">
+              
+          <Card className="col-span-1 border-0 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold flex items-center gap-2 truncate">
                 <BarChart3 className="h-5 w-5 shrink-0" /> Team Performance
