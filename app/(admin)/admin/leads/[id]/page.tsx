@@ -190,6 +190,9 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-semibold">Phone</p>
                   <p className="font-medium text-sm break-all">{lead.phone}</p>
+                  <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-2 mt-1 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+                    <Phone className="h-4 w-4" /> Call
+                  </a>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-semibold">Email</p>

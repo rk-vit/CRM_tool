@@ -240,6 +240,7 @@ export default function AdminLeadsPage() {
                   <TableHead>Project</TableHead>
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead className="hidden lg:table-cell">Created</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
@@ -272,6 +273,7 @@ export default function AdminLeadsPage() {
                         {lead.status}
                       </Badge>
                     </TableCell>
+                    <TableCell>{lead.source || "—"}</TableCell>
                     <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
                       {format(new Date(lead.createdAt), "MMM dd, yyyy")}
                     </TableCell>
