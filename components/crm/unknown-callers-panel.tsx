@@ -152,9 +152,9 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-md p-0 flex flex-col">
+        <SheetContent className="sm:max-w-md p-0 flex flex-col h-full overflow-hidden">
           <SheetHeader className="p-6 pb-4 border-b">
-            <SheetTitle className="flex items-center justify-between">
+            <SheetTitle className="flex items-center justify-between pb-1">
               <span>Unknown Callers</span>
               {callers.length > 0 && (
                 <Badge variant="secondary" className="text-xs">
@@ -165,7 +165,7 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
             <SheetDescription className="sr-only">Review and manage unknown inbound callers</SheetDescription>
           </SheetHeader>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 overflow-y-auto min-h-0">
             {loading ? (
               <div className="flex items-center justify-center p-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -183,7 +183,9 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                          <Phone className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          <a href={`tel:${caller.phone}`}>
+                            <Phone className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </a>
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
