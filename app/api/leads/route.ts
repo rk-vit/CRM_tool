@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
     if (assignedTo) {
       params.push(assignedTo);
-      query += ` AND ($${params.length} = ANY(l.assigned_users) OR l.assigned_to = $${params.length})`;
+      query += ` AND ($${params.length} = ANY(l.assigned_users) OR (l.assigned_users IS NULL AND l.assigned_to = $${params.length}))`;
     }
 
     if (status && status !== "all") {

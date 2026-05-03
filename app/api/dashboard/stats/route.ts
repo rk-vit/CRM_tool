@@ -10,8 +10,8 @@ export async function GET(request: Request) {
     const params = [];
 
     if (assignedTo) {
+       whereClause = `WHERE $1 = ANY(assigned_users) OR (assigned_users IS NULL AND assigned_to = $1)`;
       params.push(assignedTo);
-      whereClause = `WHERE assigned_to = $1`;
     }
 
     const counts = await sql.query(`
