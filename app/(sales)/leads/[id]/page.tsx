@@ -4,7 +4,7 @@ import { Header } from "@/components/crm/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { useAuth } from "@/lib/auth-context"
 import { App } from '@capacitor/app';
@@ -67,7 +67,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
- 
+
 const formatDate = (date: string | null | undefined) =>
   date ? format(new Date(date), "MMM dd, yyyy hh:mm a") : "—";
 
@@ -84,7 +84,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
   const [callMinimized, setCallMinimized] = useState(false)
   const [callSid, setCallSid] = useState<string | null>(null)
   const [callResult, setCallResult] = useState<string | null>(null)
-  
+
   // Timer for the calling screen
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -97,17 +97,17 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
     }
     return () => clearInterval(interval)
   }, [isCalling])
- 
+
   // Poll Exotel callback for call status — auto-end when call completes
   useEffect(() => {
     if (!isCalling || !callSid) return
- 
+
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(`/api/calls/status?callSid=${callSid}`)
         if (!res.ok) return
         const data = await res.json()
- 
+
         if (data.ended) {
           // Call has ended — auto-dismiss widget
           clearInterval(pollInterval)
@@ -116,8 +116,8 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
             data.status === "answered"
               ? `Call completed — ${Math.floor(data.duration / 60)}m ${data.duration % 60}s`
               : data.status === "busy"
-              ? "Lead was busy"
-              : "Call was not answered"
+                ? "Lead was busy"
+                : "Call was not answered"
           )
           // Clear result after 5 seconds
           setTimeout(() => setCallResult(null), 5000)
@@ -127,32 +127,32 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
         console.error("Poll error:", err)
       }
     }, 5000)
- 
+
     return () => clearInterval(pollInterval)
   }, [isCalling, callSid])
- 
+
   const handleCallClick = () => {
     setCallError(null)
     setCallConfirmOpen(true)
   }
- 
+
   const handleConfirmCall = async () => {
     setCallLoading(true)
     setCallError(null)
- 
+
     try {
       const res = await fetch("/api/calls/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leadId: lead.id }),
       })
- 
+
       const result = await res.json()
- 
+
       if (!res.ok) {
         throw new Error(result.error || "Failed to initiate call");
       }
- 
+
       setCallSid(result.callSid || null)
       setCallConfirmOpen(false)
       setIsCalling(true)
@@ -162,7 +162,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
       setCallLoading(false);
     }
   }
- 
+
   const handleEndCall = () => {
     setIsCalling(false)
     setCallSid(null)
@@ -190,6 +190,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
   } | null>(null);
 
   const handleSendEmail = async () => {
+    const { user } = useAuth();
     if (!emailSubject || !emailContent) {
       alert("Please fill in both subject and content.");
       return;
@@ -205,6 +206,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
           to: lead.email,
           subject: emailSubject,
           body: emailContent,
+          createdBy: user?.id,
         }),
       });
 
@@ -255,7 +257,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
       </div>
     );
   }
- 
+
   if (error || !data) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
@@ -271,27 +273,27 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
 
   const { lead, timeline, calls, emails, comments } = data;
   const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
-  `Dear ${lead.name},`,
-  ``,
-  `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
-  ``,
-  `Project Preview:`,
-  `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
-  ``,
-  `Location (Google Maps):`,
-  `https://maps.google.com/?q=Madhavaram,Chennai`,
-  ``,
-  `We would be pleased to discuss the project details with you at your convenience. Kindly let us know a suitable time to connect.`,
-  ``,
-  `Best Regards,`,
-  `SRIRAM BUILDERS`,
-  `95 0094 0094`,
-].join("\n"))}`;
+    `Dear ${lead.name},`,
+    ``,
+    `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
+    ``,
+    `Project Preview:`,
+    `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
+    ``,
+    `Location (Google Maps):`,
+    `https://maps.google.com/?q=Madhavaram,Chennai`,
+    ``,
+    `We would be pleased to discuss the project details with you at your convenience. Kindly let us know a suitable time to connect.`,
+    ``,
+    `Best Regards,`,
+    `SRIRAM BUILDERS`,
+    `95 0094 0094`,
+  ].join("\n"))}`;
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden w-full">
       <Header title={`Lead Details`} subtitle={`${lead.id} - ${lead.name}`} />
- 
+
       <div className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 max-w-full overflow-x-hidden">
         {/* Top bar: back button + action buttons */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -300,12 +302,12 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
               <ArrowLeft className="h-4 w-4 mr-2" /> Back to Leads
             </Link>
           </Button>
-          
+
           <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-row sm:gap-2">
             <Button variant="outline" size="sm" onClick={handleCallClick} className="w-full sm:w-auto">
               <Phone className="h-4 w-4 mr-1 sm:mr-2" /> <span>Call</span>
             </Button>
-           
+
             <Sheet open={emailSheetOpen} onOpenChange={setEmailSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="sm" className="w-full sm:w-auto">
@@ -358,7 +360,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                 </SheetFooter>
               </SheetContent>
             </Sheet>
- 
+
             <Sheet open={quickActionOpen} onOpenChange={setQuickActionOpen}>
               <SheetTrigger asChild>
                 <Button size="sm" className="w-full sm:w-auto">
@@ -378,7 +380,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
             </Sheet>
           </div>
         </div>
- 
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Left sidebar — full width on mobile, 1/3 on desktop */}
           <div className="lg:col-span-1 space-y-4 md:space-y-6">
@@ -395,13 +397,13 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                     <Calendar className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Schedule</span>
                   </Button>
                   <button
-                 onClick={async () => {
-                    if (Capacitor.isNativePlatform()) {
-                      await Browser.open({ url: whatsappUrl });
-                    } else {
-                      window.open(whatsappUrl, "_blank");
-                    }
-                  }}
+                    onClick={async () => {
+                      if (Capacitor.isNativePlatform()) {
+                        await Browser.open({ url: whatsappUrl });
+                      } else {
+                        window.open(whatsappUrl, "_blank");
+                      }
+                    }}
                     className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
                   >
                     <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
@@ -410,65 +412,65 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                 </div>
               </CardContent>
             </Card>
- 
+
             <Card className="border-0 shadow-md rounded-2xl">
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                    <User className="h-4 w-4" /> Lead Details
-                  </CardTitle>
-                </CardHeader>
- 
-                <CardContent className="space-y-5 text-sm px-4 pb-4 sm:px-6 sm:pb-6">
-                  <div>
-                    <p className="text-medium text-muted-foreground uppercase tracking-wide">Email</p>
-                    <div className="flex items-center justify-between mt-1 gap-2">
-                      <p className="font-semibold text-base text-foreground break-all min-w-0">
-                        {lead.email}
-                      </p>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
- 
-                  {/* Source */}
-                  <div>
-                    <p className="text-medium text-muted-foreground uppercase tracking-wide">Source</p>
-                    <p className="mt-1 font-semibold text-foreground">{lead.source || "-"}</p>
-                  </div>
- 
-                  {/* Status */}
-                  <div>
-                    <p className="text-medium text-muted-foreground uppercase tracking-wide">Sub Status</p>
-                    <div className="mt-1">
-                      <Badge className="px-2 py-0.5 text-xs capitalize">
-                        {lead.subStatus || "N/A"}
-                      </Badge>
-                    </div>
-                  </div>
- 
-                  {/* Follow Up */}
-                  <div>
-                    <p className="text-medium text-muted-foreground uppercase tracking-wide">
-                      Next Follow Up
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <User className="h-4 w-4" /> Lead Details
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-5 text-sm px-4 pb-4 sm:px-6 sm:pb-6">
+                <div>
+                  <p className="text-medium text-muted-foreground uppercase tracking-wide">Email</p>
+                  <div className="flex items-center justify-between mt-1 gap-2">
+                    <p className="font-semibold text-base text-foreground break-all min-w-0">
+                      {lead.email}
                     </p>
-                    <p className="mt-1 font-semibold text-foreground">
-                      {formatDate(lead.followUpDate)}
-                    </p>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
                   </div>
- 
-                </CardContent>
-              </Card>
- 
+                </div>
+
+                {/* Source */}
+                <div>
+                  <p className="text-medium text-muted-foreground uppercase tracking-wide">Source</p>
+                  <p className="mt-1 font-semibold text-foreground">{lead.source || "-"}</p>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <p className="text-medium text-muted-foreground uppercase tracking-wide">Sub Status</p>
+                  <div className="mt-1">
+                    <Badge className="px-2 py-0.5 text-xs capitalize">
+                      {lead.subStatus || "N/A"}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Follow Up */}
+                <div>
+                  <p className="text-medium text-muted-foreground uppercase tracking-wide">
+                    Next Follow Up
+                  </p>
+                  <p className="mt-1 font-semibold text-foreground">
+                    {formatDate(lead.followUpDate)}
+                  </p>
+                </div>
+
+              </CardContent>
+            </Card>
+
             <Card className="border-0 shadow-md rounded-2xl">
               <CardHeader className="p-4 sm:p-6">
                 <CardTitle className="text-lg font-semibold flex items-center gap-2">
                   <Tag className="h-4 w-4" /> Property Interest
                 </CardTitle>
               </CardHeader>
- 
+
               <CardContent className="space-y-4 text-sm px-4 pb-4 sm:px-6 sm:pb-6">
- 
+
                 <div>
                   <p className="text-medium text-muted-foreground uppercase tracking-wide">
                     Project
@@ -477,11 +479,11 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                     {lead.project || "-"}
                   </p>
                 </div>
- 
+
               </CardContent>
             </Card>
           </div>
- 
+
           {/* Right content — full width on mobile, 2/3 on desktop */}
           <div className="lg:col-span-2 space-y-6">
             <Tabs defaultValue="timeline" className="w-full">
@@ -500,7 +502,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                   <FileText className="h-4 w-4 mr-2" /> Notes
                 </TabsTrigger>
               </TabsList>
- 
+
               <TabsContent value="timeline" className="pt-6 space-y-6">
                 <div className="relative pl-6 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-muted">
                   {timeline.map((event) => (
@@ -524,7 +526,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                   ))}
                 </div>
               </TabsContent>
- 
+
               {/* Calls Content */}
               <TabsContent value="calls" className="pt-6">
                 <div className="space-y-4">
@@ -552,10 +554,10 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                             {call.status}
                           </Badge>
                           {call.recordingUrl && (
-                            <audio 
-                              controls 
-                              src={`/api/calls/recording?url=${encodeURIComponent(call.recordingUrl)}`} 
-                              className="h-8 w-full max-w-[200px]" 
+                            <audio
+                              controls
+                              src={`/api/calls/recording?url=${encodeURIComponent(call.recordingUrl)}`}
+                              className="h-8 w-full max-w-[200px]"
                               title="Listen to call recording"
                             />
                           )}
@@ -570,7 +572,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                   )}
                 </div>
               </TabsContent>
- 
+
               {/* Emails Content */}
               <TabsContent value="emails" className="pt-6">
                 <div className="space-y-4">
@@ -598,7 +600,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                   )}
                 </div>
               </TabsContent>
- 
+
               <TabsContent value="notes" className="pt-6">
                 <div className="space-y-4">
                   {comments.map((comment) => (
@@ -618,7 +620,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       </div>
- 
+
       {/* Call Confirmation Dialog */}
       <Dialog open={callConfirmOpen} onOpenChange={setCallConfirmOpen}>
         <DialogContent showCloseButton={false} className="sm:max-w-md mx-4 sm:mx-auto">
@@ -670,7 +672,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
           </DialogFooter>
         </DialogContent>
       </Dialog>
- 
+
       {/* Calling Widget — Bottom-right pop-up */}
       {isCalling &&
         (callMinimized ? (
@@ -716,7 +718,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                 <Minimize2 className="h-4 w-4" />
               </button>
             </div>
- 
+
             {/* Call content */}
             <div className="px-6 py-5 flex flex-col items-center gap-4">
               {/* Avatar with pulse */}
@@ -739,14 +741,14 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                   </span>
                 </div>
               </div>
- 
+
               {/* Lead info */}
               <div className="text-center space-y-0.5">
                 <p className="text-white font-semibold text-base">
                   {lead.name}
                 </p>
               </div>
- 
+
               {/* Timer */}
               <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10">
                 <p className="text-white font-mono text-sm tracking-widest">
@@ -754,7 +756,7 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
                 </p>
               </div>
             </div>
- 
+
             {/* End call footer */}
             <div className="px-6 pb-5 flex justify-center">
               <button
@@ -767,8 +769,8 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
         )
-      )}
- 
+        )}
+
       {/* Call Result Toast — shown when auto-ended by webhook */}
       {callResult && (
         <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300 max-w-[calc(100vw-2rem)]">
@@ -796,6 +798,7 @@ function QuickActionForm({
   const [comment, setComment] = useState("");
   const [followUpDate, setFollowUpDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const handleSubmit = async () => {
     try {
@@ -809,6 +812,7 @@ function QuickActionForm({
           subStatus,
           comment,
           followUpDate,
+          createdBy: user?.id,
         }),
       });
       if (!response.ok) throw new Error("Update failed");
@@ -827,7 +831,7 @@ function QuickActionForm({
         <p className="text-sm text-muted-foreground">Lead ID</p>
         <p className="font-medium">{lead.id}</p>
       </div>
- 
+
       <div className="space-y-2">
         <label className="text-sm font-medium">Comment</label>
         <Textarea
@@ -837,7 +841,7 @@ function QuickActionForm({
           disabled={isSubmitting}
         />
       </div>
- 
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label className="text-sm font-medium">Status</label>
@@ -877,7 +881,7 @@ function QuickActionForm({
           </Select>
         </div>
       </div>
- 
+
       <div className="space-y-2">
         <label className="text-sm font-medium">Follow-up Date</label>
         <Input
@@ -887,7 +891,7 @@ function QuickActionForm({
           disabled={isSubmitting}
         />
       </div>
- 
+
       <div className="flex gap-2 pt-4">
         <Button
           variant="outline"
@@ -908,4 +912,4 @@ function QuickActionForm({
     </div>
   )
 }
- 
+

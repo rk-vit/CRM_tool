@@ -38,6 +38,29 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [userNames, setUserNames] = useState<Record<string, string>>({})
+
+useEffect(() => {
+  if (!data?.timeline) return
+  
+  const uniqueIds = [...new Set(
+    data.timeline
+      .map((e: TimelineEvent) => e.createdBy)
+      .filter((id: string) => id && id !== "system")
+  )]
+
+  uniqueIds.forEach(async (id: string) => {
+    if (userNames[id]) return
+    try {
+      const res = await fetch(`/api/sales/${id}`)
+      const data2 = await res.json()
+      console.log(data2); 
+      setUserNames(prev => ({ ...prev, [id]: data2.name }))
+    } catch {
+      setUserNames(prev => ({ ...prev, [id]: id }))
+    }
+  })
+}, [data])
 
   useEffect(() => {
     async function fetchLeadDetails() {
@@ -97,12 +120,12 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
       <div className="border-b bg-card">
         <div className="p-4 md:p-6 pl-14 md:pl-6">
           <div className=" flex flex-col items-end max-h-max p-0 justify-center mb-2">
-          <Link
-            href="/admin/leads"
-            className="flex items-center text-sm text-muted-foreground hover:text-primary mb-4 transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Back to All Leads
-          </Link>
+            <Link
+              href="/admin/leads"
+              className="flex items-center text-sm text-muted-foreground hover:text-primary mb-4 transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" /> Back to All Leads
+            </Link>
           </div>
           <div className="flex flex-col gap-4">
             {/* Lead identity */}
@@ -124,7 +147,7 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
                     <Calendar className="h-3 w-3 shrink-0" /> Added {format(new Date(lead.createdAt), "MMM dd, yyyy")}
                   </span>
                   <span className="flex items-center gap-1">
-                    <User className="h-3 w-3 shrink-0" /> Assigned to:&nbsp;<span className="font-medium text-primary">{lead.assignedToName || "Unassigned"}</span>
+                    <User className="h-3 w-3 shrink-0" /> Assigned to:&nbsp;<span className="font-medium text-primary">{lead.assignedUserNames?.join(", ") || lead.assignedToName || "Unassigned"}</span>
                   </span>
                 </div>
               </div>
@@ -166,7 +189,7 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Reassign Executive</p>
                   <Button variant="outline" className="w-full justify-between text-sm">
-                    <span className="truncate">{lead.assignedToName || "Select Executive"}</span>
+                    <span className="truncate">{lead.assignedUserNames?.join(", ") || lead.assignedToName || "Select Executive"}</span>
                     <Plus className="h-4 w-4 shrink-0 ml-2" />
                   </Button>
                 </div>
@@ -232,7 +255,7 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
                         </div>
                         <p className="text-sm text-muted-foreground break-words">{event.description}</p>
                         <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-bold">
-                          BY {event.createdBy === "system" ? "SYSTEM" : event.createdBy}
+                          BY {event.createdBy === "system" ? "SYSTEM" : (userNames[event.createdBy] || event.createdBy)}
                         </p>
                       </div>
                     </div>
@@ -248,9 +271,8 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
                         {/* Call info row */}
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${
-                              call.direction === "inbound" ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
-                            }`}>
+                            <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${call.direction === "inbound" ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
+                              }`}>
                               <Phone className="h-4 w-4" />
                             </div>
                             <div className="min-w-0">

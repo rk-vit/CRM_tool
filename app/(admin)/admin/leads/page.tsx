@@ -88,11 +88,11 @@ export default function AdminLeadsPage() {
           fetch("/api/projects"),
           fetch("/api/admin/users")
         ])
-        
+
         const leadsData = await leadsRes.json()
         const projectsData = await projectsRes.json()
         const execData = await execRes.json()
-        
+
         setLeads(Array.isArray(leadsData) ? leadsData : [])
         setProjects(Array.isArray(projectsData) ? projectsData : [])
         setExecutives(Array.isArray(execData) ? execData : [])
@@ -108,7 +108,7 @@ export default function AdminLeadsPage() {
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
-      const matchesSearch = 
+      const matchesSearch =
         lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.phone.includes(searchQuery) ||
         lead.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -173,8 +173,8 @@ export default function AdminLeadsPage() {
         </div>
 
         {/* Status Tabs */}
-        <Tabs 
-          value={statusFilter} 
+        <Tabs
+          value={statusFilter}
           onValueChange={(v) => {
             setStatusFilter(v as LeadStatus | "all")
             const params = new URLSearchParams(searchParams.toString())
@@ -247,9 +247,9 @@ export default function AdminLeadsPage() {
               </TableHeader>
               <TableBody>
                 {paginatedLeads.map((lead) => (
-                <TableRow key={lead.id} className="hover:bg-accent/50 group cursor-pointer transition-colors" onClick={() => router.push(`/admin/leads/${lead.id}`)}>     
+                  <TableRow key={lead.id} className="hover:bg-accent/50 group cursor-pointer transition-colors" onClick={() => router.push(`/admin/leads/${lead.id}`)}>
                     <TableCell className="font-medium text-primary">
-                    <Link href={`/admin/leads/${lead.id}`}>{lead.id}</Link>
+                      <Link href={`/admin/leads/${lead.id}`}>{lead.id}</Link>
                     </TableCell>
                     <TableCell>
                       <div>
@@ -263,9 +263,9 @@ export default function AdminLeadsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">
-                          {(lead.assignedToName || "U").split(" ").map(n => n[0]).join("")}
+                          {(lead.assignedUserNames?.[0] || lead.assignedToName || "U").split(" ").map(n => n[0]).join("")}
                         </div>
-                        <span className="text-sm">{lead.assignedToName || "Unassigned"}</span>
+                        <span className="text-sm">{lead.assignedUserNames?.join(", ") || lead.assignedToName || "Unassigned"}</span>
                       </div>
                     </TableCell>
                     <TableCell>

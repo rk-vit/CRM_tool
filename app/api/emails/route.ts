@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const session = await auth();
     const userId = session?.user?.id || "system";
 
-    const { leadId, to, subject, body } = await request.json();
+    const { leadId, to, subject, body, created_by } = await request.json();
 
     if (!leadId || !to || !subject || !body) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -66,8 +66,8 @@ export async function POST(request: Request) {
 
     // Log the email in the database only on success
     const emailQuery = `
-      INSERT INTO email_logs (lead_id, "from", "to", subject, body, status, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      INSERT INTO email_logs (lead_id, "from", "to", subject, body, status, created_by,created_at)
+      VALUES ($1, $2, $3, $4, $5, $6,$7, NOW())
       RETURNING *
     `;
     const emailParams = [
@@ -76,7 +76,8 @@ export async function POST(request: Request) {
       to,
       subject,
       body,
-      "sent"
+      "sent",
+      userId,
     ];
 
     const emailResult = await sql.query(emailQuery, emailParams);
@@ -95,9 +96,9 @@ export async function POST(request: Request) {
     ];
     await sql.query(timelineQuery, timelineParams);
 
-    return NextResponse.json({ 
-      message: "Email sent successfully", 
-      emailLog: emailResult[0] 
+    return NextResponse.json({
+      message: "Email sent successfully",
+      emailLog: emailResult[0]
     });
   } catch (error) {
     console.error("API error:", error);

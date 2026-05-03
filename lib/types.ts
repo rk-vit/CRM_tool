@@ -11,7 +11,7 @@ export interface User {
   createdAt: string
 }
 
-export type LeadStatus = "new" | "contacted" | "qualified" | "negotiation" | "won" | "lost" |"reengaged"
+export type LeadStatus = "new" | "contacted" | "qualified" | "negotiation" | "won" | "lost" | "reengaged"
 export type LeadSubStatus = "hot" | "warm" | "cold"
 export type LeadSource = "website" | "google_ads" | "facebook" | "referral" | "direct" | "99acres" | "magicbricks" | "housing"
 
@@ -28,6 +28,7 @@ export interface Lead {
   medium: string
   assignedTo: string
   assignedToName: string
+  assignedU_users?: string[]
   createdAt: string
   updatedAt: string
   followUpDate?: string

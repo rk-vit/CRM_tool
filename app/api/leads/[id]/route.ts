@@ -10,7 +10,8 @@ export async function GET(
   try {
     const [leadRes, timelineRes, callsRes, emailsRes, commentsRes] = await Promise.all([
       sql`
-        SELECT l.*, u.name as "assignedToName"
+        SELECT l.*, u.name as "assignedToName",
+        (SELECT array_agg(name) FROM users WHERE id = ANY(l.assigned_users)) AS "assignedUserNames"
         FROM leads l
         LEFT JOIN users u ON l.assigned_to = u.id
         WHERE l.id = ${id}
@@ -45,6 +46,8 @@ export async function GET(
       medium: lead.medium,
       assignedTo: lead.assigned_to,
       assignedToName: lead.assignedToName,
+      assignedUsers: lead.assigned_users || [],
+      assignedUserNames: lead.assignedUserNames || [],
       createdAt: lead.created_at,
       updatedAt: lead.updated_at,
       followUpDate: lead.follow_up_date,

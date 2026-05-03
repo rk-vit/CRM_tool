@@ -144,7 +144,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex flex-col gap-6 w-full min-w-0 [&>*]:min-w-0">
-        <Card className="col-span-1 md:col-span-2 border-0 shadow-sm">
+          <Card className="col-span-1 md:col-span-2 border-0 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-semibold">Latest Leads Across Team</CardTitle>
               <Button variant="ghost" size="sm" asChild>
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
                         </td>
                         <td className="py-2 md:py-3 pr-3 overflow-hidden max-w-0">
                           <Badge className="font-normal text-[10px] md:text-xs px-1.5 py-0.5 truncate max-w-full block">
-                            {lead.assignedToName || "Unassigned"}
+                            {lead.assignedUserNames?.join(", ") || lead.assignedToName || "Unassigned"}
                           </Badge>
                         </td>
                         <td className="py-2 md:py-3 pr-3 text-muted-foreground truncate overflow-hidden max-w-0">
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-              
+
           <Card className="col-span-1 border-0 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold flex items-center gap-2 truncate">
@@ -251,15 +251,14 @@ export default function AdminDashboard() {
                   <div key={event.id} className="flex gap-2 md:gap-3">
                     <div className="relative flex flex-col items-center shrink-0">
                       <div
-                        className={`h-2 w-2 rounded-full ${
-                          event.type === "call"
+                        className={`h-2 w-2 rounded-full ${event.type === "call"
                             ? "bg-green-500"
                             : event.type === "email"
-                            ? "bg-blue-500"
-                            : event.type === "status_change"
-                            ? "bg-orange-500"
-                            : "bg-muted-foreground"
-                        }`}
+                              ? "bg-blue-500"
+                              : event.type === "status_change"
+                                ? "bg-orange-500"
+                                : "bg-muted-foreground"
+                          }`}
                       />
                       {index < recentTimeline.length - 1 && (
                         <div className="flex-1 w-px bg-border mt-1" />
