@@ -799,7 +799,7 @@ function QuickActionForm({
   const [followUpDate, setFollowUpDate] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
-
+  
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
