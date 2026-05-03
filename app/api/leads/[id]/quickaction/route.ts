@@ -6,7 +6,7 @@ export async function POST(
 ) {
   try {
     console.log("Received quick action request");
-    const { id, status, subStatus, comment, followUpDate, created_by } = await req.json();
+    const { id, status, subStatus, comment, followUpDate, createdBy } = await req.json();
 
     await sql`
       UPDATE leads 
@@ -32,7 +32,7 @@ export async function POST(
         'status_change',
         'Quick Action Update', 
         ${`Status updated to ${status} and sub-status to ${subStatus}.`}, 
-        ${created_by}, 
+        ${createdBy}, 
         NOW()
       )
     `;
@@ -48,7 +48,7 @@ export async function POST(
         VALUES (
           ${id}, 
           ${comment}, 
-          ${created_by},
+          ${createdBy},
           NOW()
         )
       `;
@@ -67,7 +67,7 @@ export async function POST(
           'comment',
           'New Note Added', 
           ${comment}, 
-          ${created_by}, 
+          ${createdBy}, 
           NOW()
         )
       `;

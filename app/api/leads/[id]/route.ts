@@ -47,7 +47,6 @@ export async function GET(
       assignedTo: lead.assigned_to,
       assignedToName: lead.assignedToName,
       assignedUsers: lead.assigned_users || [],
-      assignedUserNames: lead.assignedUserNames || [],
       createdAt: lead.created_at,
       updatedAt: lead.updated_at,
       followUpDate: lead.follow_up_date,
