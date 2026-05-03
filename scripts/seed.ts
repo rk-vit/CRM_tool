@@ -81,6 +81,7 @@ async function main() {
         source lead_source NOT NULL DEFAULT 'direct',
         medium TEXT NOT NULL,
         assigned_to TEXT REFERENCES users(id) ON DELETE SET NULL,
+        assigned_users TEXT[] DEFAULT '{}',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         follow_up_date TIMESTAMP WITH TIME ZONE,
@@ -188,11 +189,25 @@ async function main() {
       VALUES ('admin-1', 'Admin User', 'admin1@gmail.com', ${adminPass}, 'admin', '+91 9876543211')
     `;
 
-    // Sales User
+    // Sales User 1
     const salesPass = await bcrypt.hash('user1@123', 10);
     await sql`
       INSERT INTO users (id, name, email, password, role, phone)
-      VALUES ('user-1', 'Sales User', 'user1@gmail.com', ${salesPass}, 'sales', '+91 9876543210')
+      VALUES ('user-1', 'Supriya', 'supriya@realestate.com', ${salesPass}, 'sales', '+91 9876543210')
+    `;
+
+    // Sales User 2
+    const salesPass2 = await bcrypt.hash('user2@123', 10);
+    await sql`
+      INSERT INTO users (id, name, email, password, role, phone)
+      VALUES ('user-2', 'Amit Patel', 'amit@realestate.com', ${salesPass2}, 'sales', '+91 9876543212')
+    `;
+
+    // Sales User 3
+    const salesPass3 = await bcrypt.hash('user3@123', 10);
+    await sql`
+      INSERT INTO users (id, name, email, password, role, phone)
+      VALUES ('user-3', 'Sneha Reddy', 'sneha@realestate.com', ${salesPass3}, 'sales', '+91 9876543213')
     `;
 
     console.log('Seeding leads...');
@@ -201,11 +216,11 @@ async function main() {
       await sql`
         INSERT INTO leads (
           id, name, email, phone, alternate_phone, project, status, sub_status, source, medium, 
-          assigned_to, created_at, updated_at, follow_up_date, budget, requirements, notes
+          assigned_to, assigned_users, created_at, updated_at, follow_up_date, budget, requirements, notes
         ) VALUES (
           ${lead.id}, ${lead.name}, ${lead.email}, ${lead.phone}, ${lead.alternatePhone || null}, 
           ${lead.project}, ${lead.status}, ${lead.subStatus}, ${lead.source}, ${lead.medium}, 
-          'user-1', ${lead.createdAt}, ${lead.updatedAt}, ${lead.followUpDate || null}, 
+          'user-1', ${lead.assignedUsers || []}, ${lead.createdAt}, ${lead.updatedAt}, ${lead.followUpDate || null}, 
           ${lead.budget || null}, ${lead.requirements || null}, ${lead.notes || null}
         )
       `;

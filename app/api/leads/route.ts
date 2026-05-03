@@ -11,7 +11,8 @@ export async function GET(request: Request) {
     let query = `
       SELECT 
         l.*,
-        u.name as "assignedToName"
+        u.name as "assignedToName",
+        (SELECT array_agg(name) FROM users WHERE id = ANY(l.assigned_users)) AS "assignedUserNames"
       FROM leads l
       LEFT JOIN users u ON l.assigned_to = u.id
       WHERE 1=1
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
 
     if (assignedTo) {
       params.push(assignedTo);
-      query += ` AND l.assigned_to = $${params.length}`;
+      query += ` AND ($${params.length} = ANY(l.assigned_users) OR l.assigned_to = $${params.length})`;
     }
 
     if (status && status !== "all") {
@@ -51,6 +52,8 @@ export async function GET(request: Request) {
       medium: lead.medium,
       assignedTo: lead.assigned_to,
       assignedToName: lead.assignedToName,
+      assignedUsers: lead.assigned_users || [],
+      assignedUserNames: lead.assignedUserNames || [],
       createdAt: lead.created_at,
       updatedAt: lead.updated_at,
       followUpDate: lead.follow_up_date,
@@ -69,20 +72,20 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { 
-      id, name, email, phone, alternatePhone, project, status, 
-      subStatus, source, medium, assignedTo, followUpDate, 
-      budget, requirements, notes 
+    const {
+      id, name, email, phone, alternatePhone, project, status,
+      subStatus, source, medium, assignedTo, assignedUsers, followUpDate,
+      budget, requirements, notes
     } = body;
 
     const result = await sql`
       INSERT INTO leads (
         id, name, email, phone, alternate_phone, project, status, 
-        sub_status, source, medium, assigned_to, follow_up_date, 
+        sub_status, source, medium, assigned_to, assigned_users, follow_up_date, 
         budget, requirements, notes
       ) VALUES (
         ${id}, ${name}, ${email}, ${phone}, ${alternatePhone || null}, ${project}, ${status || 'new'}, 
-        ${subStatus || 'warm'}, ${source || 'direct'}, ${medium}, ${assignedTo || null}, 
+        ${subStatus || 'warm'}, ${source || 'direct'}, ${medium}, ${assignedTo || null}, ${assignedUsers || []},
         ${followUpDate || null}, ${budget || null}, ${requirements || null}, ${notes || null}
       ) RETURNING *
     `;

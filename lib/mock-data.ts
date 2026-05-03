@@ -2,8 +2,8 @@ import type { Lead, User, TimelineEvent, CallLog, EmailLog, Comment, DashboardSt
 
 export const currentUser: User = {
   id: "user-1",
-  name: "Rajesh Kumar",
-  email: "rajesh@realestate.com",
+  name: "Supriya",
+  email: "supriya@realestate.com",
   password: "password123",
   role: "sales",
   phone: "+91 9876543210",
@@ -23,8 +23,8 @@ export const adminUser: User = {
 export const salesExecutives: SalesExecutive[] = [
   {
     id: "user-1",
-    name: "Rajesh Kumar",
-    email: "rajesh@realestate.com",
+    name: "Supriya",
+    email: "supriya@realestate.com",
     password: "password123",
     role: "sales",
     phone: "+91 9876543210",
@@ -59,19 +59,6 @@ export const salesExecutives: SalesExecutive[] = [
     leadsConverted: 15,
     totalCalls: 278,
     conversionRate: 16.5
-  },
-  {
-    id: "user-4",
-    name: "Vikram Singh",
-    email: "vikram@realestate.com",
-    password: "password123",
-    role: "sales",
-    phone: "+91 9876543214",
-    createdAt: "2024-03-01T10:00:00Z",
-    leadsAssigned: 45,
-    leadsConverted: 5,
-    totalCalls: 112,
-    conversionRate: 11.1
   }
 ]
 
@@ -88,7 +75,9 @@ export const leads: Lead[] = [
     source: "google_ads",
     medium: "Google Ads",
     assignedTo: "user-1",
-    assignedToName: "Rajesh Kumar",
+    assignedToName: "Supriya",
+    assignedUsers: ["user-1", "user-2", "user-3"],
+    assignedUserNames: ["Supriya", "Amit Patel", "Sneha Reddy"],
     createdAt: "2024-08-23T09:00:32Z",
     updatedAt: "2024-08-23T09:04:00Z",
     followUpDate: "2024-08-24T11:00:00Z",
@@ -107,7 +96,9 @@ export const leads: Lead[] = [
     source: "99acres",
     medium: "99 Acres",
     assignedTo: "user-1",
-    assignedToName: "Rajesh Kumar",
+    assignedToName: "Supriya",
+    assignedUsers: ["user-1", "user-2", "user-3"],
+    assignedUserNames: ["Supriya", "Amit Patel", "Sneha Reddy"],
     createdAt: "2024-08-22T14:08:50Z",
     updatedAt: "2024-08-22T14:08:50Z",
     budget: "60L - 80L",
@@ -124,7 +115,9 @@ export const leads: Lead[] = [
     source: "website",
     medium: "Website",
     assignedTo: "user-1",
-    assignedToName: "Rajesh Kumar",
+    assignedToName: "Supriya",
+    assignedUsers: ["user-1", "user-2", "user-3"],
+    assignedUserNames: ["Supriya", "Amit Patel", "Sneha Reddy"],
     createdAt: "2024-08-22T11:16:23Z",
     updatedAt: "2024-08-22T11:16:23Z"
   },
@@ -138,8 +131,10 @@ export const leads: Lead[] = [
     subStatus: "warm",
     source: "facebook",
     medium: "Facebook Ads",
-    assignedTo: "user-2",
-    assignedToName: "Amit Patel",
+    assignedTo: "user-1",
+    assignedToName: "Supriya",
+    assignedUsers: ["user-1", "user-2", "user-3"],
+    assignedUserNames: ["Supriya", "Amit Patel", "Sneha Reddy"],
     createdAt: "2024-08-21T10:30:00Z",
     updatedAt: "2024-08-23T15:00:00Z",
     followUpDate: "2024-08-25T10:00:00Z",
@@ -155,8 +150,10 @@ export const leads: Lead[] = [
     subStatus: "hot",
     source: "referral",
     medium: "Referral",
-    assignedTo: "user-3",
-    assignedToName: "Sneha Reddy",
+    assignedTo: "user-1",
+    assignedToName: "Supriya",
+    assignedUsers: ["user-1", "user-2", "user-3"],
+    assignedUserNames: ["Supriya", "Amit Patel", "Sneha Reddy"],
     createdAt: "2024-08-15T09:00:00Z",
     updatedAt: "2024-08-23T16:00:00Z",
     followUpDate: "2024-08-24T14:00:00Z",
@@ -174,7 +171,9 @@ export const leads: Lead[] = [
     source: "google_ads",
     medium: "Google Ads",
     assignedTo: "user-1",
-    assignedToName: "Rajesh Kumar",
+    assignedToName: "Supriya",
+    assignedUsers: ["user-1", "user-2", "user-3"],
+    assignedUserNames: ["Supriya", "Amit Patel", "Sneha Reddy"],
     createdAt: "2024-07-10T10:00:00Z",
     updatedAt: "2024-08-20T12:00:00Z",
     budget: "90L - 1Cr"
@@ -189,8 +188,10 @@ export const leads: Lead[] = [
     subStatus: "cold",
     source: "magicbricks",
     medium: "MagicBricks",
-    assignedTo: "user-2",
-    assignedToName: "Amit Patel",
+    assignedTo: "user-1",
+    assignedToName: "Supriya",
+    assignedUsers: ["user-1", "user-2", "user-3"],
+    assignedUserNames: ["Supriya", "Amit Patel", "Sneha Reddy"],
     createdAt: "2024-07-05T11:00:00Z",
     updatedAt: "2024-08-15T10:00:00Z"
   },
@@ -204,8 +205,10 @@ export const leads: Lead[] = [
     subStatus: "warm",
     source: "direct",
     medium: "Walk-in",
-    assignedTo: "user-3",
-    assignedToName: "Sneha Reddy",
+    assignedTo: "user-1",
+    assignedToName: "Supriya",
+    assignedUsers: ["user-1", "user-2", "user-3"],
+    assignedUserNames: ["Supriya", "Amit Patel", "Sneha Reddy"],
     createdAt: "2024-08-20T14:30:00Z",
     updatedAt: "2024-08-23T09:00:00Z",
     followUpDate: "2024-08-26T10:00:00Z"
@@ -220,8 +223,10 @@ export const leads: Lead[] = [
     subStatus: "hot",
     source: "website",
     medium: "Website",
-    assignedTo: "user-4",
-    assignedToName: "Vikram Singh",
+    assignedTo: "user-1",
+    assignedToName: "Supriya",
+    assignedUsers: ["user-1", "user-2", "user-3"],
+    assignedUserNames: ["Supriya", "Amit Patel", "Sneha Reddy"],
     createdAt: "2024-08-22T16:00:00Z",
     updatedAt: "2024-08-23T11:00:00Z",
     followUpDate: "2024-08-24T15:00:00Z",
@@ -237,8 +242,10 @@ export const leads: Lead[] = [
     subStatus: "warm",
     source: "facebook",
     medium: "Facebook Ads",
-    assignedTo: "user-4",
-    assignedToName: "Vikram Singh",
+    assignedTo: "user-1",
+    assignedToName: "Supriya",
+    assignedUsers: ["user-1", "user-2", "user-3"],
+    assignedUserNames: ["Supriya", "Amit Patel", "Sneha Reddy"],
     createdAt: "2024-08-23T08:00:00Z",
     updatedAt: "2024-08-23T08:00:00Z"
   }
@@ -259,7 +266,7 @@ export const timelineEvents: TimelineEvent[] = [
     leadId: "RS1791",
     type: "status_change",
     title: "Lead Status Updated",
-    description: "Status changed from New to Qualified by Rajesh Kumar",
+    description: "Status changed from New to Qualified by Supriya",
     createdAt: "2024-08-23T09:02:00Z",
     createdBy: "user-1"
   },
@@ -295,7 +302,7 @@ export const timelineEvents: TimelineEvent[] = [
     leadId: "RS1792",
     type: "workflow",
     title: "New Lead Alert",
-    description: "Auto-assignment completed. Lead assigned to Rajesh Kumar",
+    description: "Auto-assignment completed. Lead assigned to Supriya",
     createdAt: "2024-08-22T14:08:55Z",
     createdBy: "system"
   },
@@ -306,7 +313,7 @@ export const timelineEvents: TimelineEvent[] = [
     title: "Email Sent",
     description: "Property brochure sent to client",
     createdAt: "2024-08-23T15:00:00Z",
-    createdBy: "user-2"
+    createdBy: "user-1"
   },
   {
     id: "evt-8",
@@ -315,7 +322,7 @@ export const timelineEvents: TimelineEvent[] = [
     title: "Site Visit Scheduled",
     description: "Site visit scheduled for August 24th, 2:00 PM",
     createdAt: "2024-08-23T16:00:00Z",
-    createdBy: "user-3"
+    createdBy: "user-1"
   }
 ]
 
@@ -329,7 +336,6 @@ export const callLogs: CallLog[] = [
     direction: "outbound",
     status: "answered",
     recordingUrl: "/recordings/call-1.mp3",
-    assignedTo: "user-1",
     createdAt: "2024-08-23T09:03:52Z"
   },
   {
@@ -341,30 +347,27 @@ export const callLogs: CallLog[] = [
     direction: "inbound",
     status: "answered",
     recordingUrl: "/recordings/call-2.mp3",
-    assignedTo: "user-1",
     createdAt: "2024-08-22T16:30:00Z"
   },
   {
     id: "call-3",
     leadId: "RS1794",
-    callerNumber: "+91 9876543212",
+    callerNumber: "+91 9876543210",
     callerTo: "+91 9876123456",
     duration: 300,
     direction: "outbound",
     status: "answered",
     recordingUrl: "/recordings/call-3.mp3",
-    assignedTo: "user-2",
     createdAt: "2024-08-23T14:00:00Z"
   },
   {
     id: "call-4",
     leadId: "RS1795",
-    callerNumber: "+91 9876543213",
+    callerNumber: "+91 9876543210",
     callerTo: "+91 9876789012",
     duration: 0,
     direction: "outbound",
     status: "missed",
-    assignedTo: "user-3",
     createdAt: "2024-08-23T10:00:00Z"
   }
 ]
@@ -375,7 +378,7 @@ export const emailLogs: EmailLog[] = [
     leadId: "RS1791",
     subject: "Welcome to Gold Mine Residency",
     body: "Dear Badri, Thank you for your interest...",
-    from: "rajesh@realestate.com",
+    from: "supriya@realestate.com",
     to: "badrinarayanan.rameshkumar@gmail.com",
     status: "opened",
     createdAt: "2024-08-23T09:10:00Z"
@@ -385,7 +388,7 @@ export const emailLogs: EmailLog[] = [
     leadId: "RS1794",
     subject: "Gold Mine Residency - Property Brochure",
     body: "Dear Arun, Please find attached...",
-    from: "amit@realestate.com",
+    from: "supriya@realestate.com",
     to: "arun.kumar@email.com",
     status: "delivered",
     createdAt: "2024-08-23T15:00:00Z"
@@ -398,7 +401,7 @@ export const comments: Comment[] = [
     leadId: "RS1791",
     text: "Spoke to the customer and he asked to call back tomorrow 11 AM",
     createdBy: "user-1",
-    createdByName: "Rajesh Kumar",
+    createdByName: "Supriya",
     createdAt: "2024-08-23T09:05:00Z"
   },
   {
@@ -406,15 +409,15 @@ export const comments: Comment[] = [
     leadId: "RS1791",
     text: "Customer confirmed interest in 3BHK south-facing unit",
     createdBy: "user-1",
-    createdByName: "Rajesh Kumar",
+    createdByName: "Supriya",
     createdAt: "2024-08-22T17:00:00Z"
   },
   {
     id: "comment-3",
     leadId: "RS1794",
     text: "Client requested detailed floor plans for Tower B",
-    createdBy: "user-2",
-    createdByName: "Amit Patel",
+    createdBy: "user-1",
+    createdByName: "Supriya",
     createdAt: "2024-08-23T14:30:00Z"
   }
 ]
