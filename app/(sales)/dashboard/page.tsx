@@ -35,7 +35,7 @@ today.setHours(0, 0, 0, 0);
 const todayString = new Date().toISOString().split("T")[0];
 export default function SalesDashboard() {
   const router = useRouter();
-  const { user } = useAuth()
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [myLeads, setMyLeads] = useState<Lead[]>([])
   const [recentTimeline, setRecentTimeline] = useState<TimelineEvent[]>([])
