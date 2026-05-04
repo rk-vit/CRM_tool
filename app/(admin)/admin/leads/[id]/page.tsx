@@ -22,11 +22,12 @@ import {
   ExternalLink,
   Plus,
   Building,
-  Edit
+  Edit,
+  Zap
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
-import type { Lead, TimelineEvent, CallLog, EmailLog, Comment } from "@/lib/types"
+import type { Lead, TimelineEvent, CallLog, EmailLog, Comment, LeadStatus, LeadSubStatus } from "@/lib/types"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -58,6 +67,7 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userNames, setUserNames] = useState<Record<string, string>>({})
+  const [quickActionOpen, setQuickActionOpen] = useState(false)
 
   // Edit State
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -87,7 +97,6 @@ useEffect(() => {
     try {
       const res = await fetch(`/api/sales/${id}`)
       const data2 = await res.json()
-      console.log(data2); 
       setUserNames(prev => ({ ...prev, [id]: data2.name }))
     } catch {
       setUserNames(prev => ({ ...prev, [id]: id }))
@@ -276,7 +285,12 @@ useEffect(() => {
             {/* Quick Actions */}
             <Card className="border-0 shadow-sm bg-primary text-primary-foreground overflow-hidden">
               <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="secondary" className="w-full min-w-0" asChild>
+                    <a href={`tel:${lead.phone}`}>
+                      <Phone className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Call</span>
+                    </a>
+                  </Button>
                   <Button variant="secondary" className="w-full min-w-0" asChild>
                     <a href={`mailto:${lead.email}`}>
                       <Mail className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Email</span>
@@ -292,6 +306,23 @@ useEffect(() => {
                   >
                     <MessageSquare className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">WhatsApp</span>
                   </Button>
+                  <Sheet open={quickActionOpen} onOpenChange={setQuickActionOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="secondary" className="w-full col-span-2 mt-1">
+                        <Zap className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Quick Action</span>
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="w-full sm:max-w-xl p-4 sm:p-6 overflow-y-auto">
+                      <SheetHeader>
+                        <SheetTitle>Quick Action</SheetTitle>
+                      </SheetHeader>
+                      <AdminQuickActionForm
+                        lead={lead}
+                        onClose={() => setQuickActionOpen(false)}
+                        refreshData={fetchLeadDetails}
+                      />
+                    </SheetContent>
+                  </Sheet>
                 </div>
               </CardContent>
             </Card>
@@ -543,6 +574,134 @@ useEffect(() => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function AdminQuickActionForm({
+  lead,
+  onClose,
+  refreshData,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  refreshData: () => Promise<void>;
+}) {
+  const [status, setStatus] = useState<LeadStatus>(lead.status);
+  const [subStatus, setSubStatus] = useState<LeadSubStatus>(lead.subStatus);
+  const [comment, setComment] = useState("");
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`/api/leads/${lead.id}/quickaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: lead.id,
+          status,
+          subStatus,
+          comment,
+          followUpDate,
+          createdBy: "admin", // Explicitly mark as admin action
+        }),
+      });
+      if (!response.ok) throw new Error("Update failed");
+      await refreshData();
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 mt-6">
+      <div className="p-3 rounded-lg bg-secondary/50">
+        <p className="text-sm text-muted-foreground">Lead ID</p>
+        <p className="font-medium">{lead.id}</p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Comment</label>
+        <Textarea
+          placeholder="Add a comment..."
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Status</label>
+          <Select
+            value={status}
+            onValueChange={(v) => setStatus(v as LeadStatus)}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="new">New</SelectItem>
+              <SelectItem value="contacted">Contacted</SelectItem>
+              <SelectItem value="qualified">Qualified</SelectItem>
+              <SelectItem value="negotiation">Negotiation</SelectItem>
+              <SelectItem value="won">Won</SelectItem>
+              <SelectItem value="lost">Lost</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Sub Status</label>
+          <Select
+            value={subStatus}
+            onValueChange={(v) => setSubStatus(v as LeadSubStatus)}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hot">Hot</SelectItem>
+              <SelectItem value="warm">Warm</SelectItem>
+              <SelectItem value="cold">Cold</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Follow-up Date</label>
+        <Input
+          type="datetime-local"
+          value={followUpDate}
+          onChange={(e) => setFollowUpDate(e.target.value)}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="flex gap-2 pt-4">
+        <Button
+          variant="outline"
+          onClick={onClose}
+          className="flex-1"
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          className="flex-1"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+        </Button>
+      </div>
     </div>
   )
 }

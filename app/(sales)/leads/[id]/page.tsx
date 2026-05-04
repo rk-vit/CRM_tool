@@ -68,6 +68,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+import { QuickActionForm } from "@/components/crm/quick-action-form";
+
 const formatDate = (date: string | null | undefined) =>
   date ? format(new Date(date), "MMM dd, yyyy hh:mm a") : "—";
 
