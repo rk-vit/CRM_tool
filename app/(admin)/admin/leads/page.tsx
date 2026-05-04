@@ -35,7 +35,10 @@ import {
   ChevronRight,
   UserPlus,
   Download,
-  Loader2
+  Loader2,
+  Users,
+  CheckCircle2,
+  TrendingUp
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -159,7 +162,57 @@ export default function AdminLeadsPage() {
     <div className="flex flex-col min-h-screen">
       <Header title="All Leads" subtitle={`${filteredLeads.length} leads `} />
 
-      <div className="flex-1 p-4 md:p-6 space-y-4">
+      <div className="flex-1 p-4 md:p-6 space-y-6">
+        {/* Leads Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <Users className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Leads</p>
+                <p className="text-2xl font-bold">{leads.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                <UserPlus className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">New Leads</p>
+                <p className="text-2xl font-bold">{statusCounts.new || 0}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Won Leads</p>
+                <p className="text-2xl font-bold">{statusCounts.won || 0}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Conversion Rate</p>
+                <p className="text-2xl font-bold">
+                  {leads.length > 0 ? ((statusCounts.won || 0) / leads.length * 100).toFixed(1) : 0}%
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Actions Row */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="flex gap-2">

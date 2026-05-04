@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 
 export async function GET(
   request: Request,
@@ -102,17 +103,45 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await auth();
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
   try {
     const body = await request.json();
-    const { status, subStatus, followUpDate, notes } = body;
+    const { 
+      name, 
+      email, 
+      phone, 
+      alternatePhone, 
+      project, 
+      status, 
+      subStatus, 
+      source,
+      medium,
+      followUpDate, 
+      budget,
+      requirements,
+      notes 
+    } = body;
 
     const result = await sql`
       UPDATE leads
       SET 
+        name = COALESCE(${name}, name),
+        email = COALESCE(${email}, email),
+        phone = COALESCE(${phone}, phone),
+        alternate_phone = COALESCE(${alternatePhone}, alternate_phone),
+        project = COALESCE(${project}, project),
         status = COALESCE(${status}, status),
         sub_status = COALESCE(${subStatus}, sub_status),
+        source = COALESCE(${source}, source),
+        medium = COALESCE(${medium}, medium),
         follow_up_date = COALESCE(${followUpDate}, follow_up_date),
+        budget = COALESCE(${budget}, budget),
+        requirements = COALESCE(${requirements}, requirements),
         notes = COALESCE(${notes}, notes),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ${id}
