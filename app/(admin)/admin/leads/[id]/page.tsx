@@ -21,11 +21,39 @@ import {
   Loader2,
   ExternalLink,
   Plus,
-  Building
+  Building,
+  Edit,
+  Zap
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
-import type { Lead, TimelineEvent, CallLog, EmailLog, Comment } from "@/lib/types"
+import type { Lead, TimelineEvent, CallLog, EmailLog, Comment, LeadStatus, LeadSubStatus } from "@/lib/types"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -39,6 +67,21 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userNames, setUserNames] = useState<Record<string, string>>({})
+  const [quickActionOpen, setQuickActionOpen] = useState(false)
+
+  // Edit State
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    alternatePhone: "",
+    project: "",
+    budget: "",
+    requirements: "",
+    notes: ""
+  })
 
 useEffect(() => {
   if (!data?.timeline) return
@@ -54,7 +97,6 @@ useEffect(() => {
     try {
       const res = await fetch(`/api/sales/${id}`)
       const data2 = await res.json()
-      console.log(data2); 
       setUserNames(prev => ({ ...prev, [id]: data2.name }))
     } catch {
       setUserNames(prev => ({ ...prev, [id]: id }))
@@ -62,24 +104,63 @@ useEffect(() => {
   })
 }, [data])
 
-  useEffect(() => {
-    async function fetchLeadDetails() {
-      try {
-        setLoading(true)
-        const res = await fetch(`/api/leads/${id}`)
-        if (!res.ok) throw new Error("Failed to fetch lead details")
-        const json = await res.json()
-        setData(json)
-      } catch (err) {
-        console.error(err)
-        setError("Could not load lead details. Please try again.")
-      } finally {
-        setLoading(false)
-      }
-    }
+  const fetchLeadDetails = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/leads/${id}`)
+      if (!res.ok) throw new Error("Failed to fetch lead details")
+      const json = await res.json()
+      setData(json)
 
+      // Initialize edit form
+      if (json.lead) {
+        setEditForm({
+          name: json.lead.name,
+          email: json.lead.email,
+          phone: json.lead.phone,
+          alternatePhone: json.lead.alternatePhone || "",
+          project: json.lead.project,
+          budget: json.lead.budget || "",
+          requirements: json.lead.requirements || "",
+          notes: json.lead.notes || ""
+        })
+      }
+    } catch (err) {
+      console.error(err)
+      setError("Could not load lead details. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchLeadDetails()
   }, [id])
+
+  const handleUpdateLead = async () => {
+    try {
+      setIsUpdating(true)
+      const res = await fetch(`/api/leads/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm)
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || "Failed to update lead")
+      }
+      
+      await fetchLeadDetails()
+      setIsEditDialogOpen(false)
+      toast.success("Lead details updated successfully")
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err.message || "Failed to update lead details")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -101,6 +182,24 @@ useEffect(() => {
   }
 
   const { lead, timeline, calls, emails, comments } = data
+
+  const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
+    `Dear ${lead.name},`,
+    ``,
+    `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
+    ``,
+    `Project Preview:`,
+    `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
+    ``,
+    `Location (Google Maps):`,
+    `https://maps.google.com/?q=Madhavaram,Chennai`,
+    ``,
+    `We would be pleased to discuss the project details with you at your convenience. Kindly let us know a suitable time to connect.`,
+    ``,
+    `Best Regards,`,
+    `SRIRAM BUILDERS`,
+    `95 0094 0094`,
+  ].join("\n"))}`;
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -165,6 +264,9 @@ useEffect(() => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                    <Edit className="h-4 w-4 mr-2" /> Edit Details
+                  </DropdownMenuItem>
                   <DropdownMenuItem>Reassign Lead</DropdownMenuItem>
                   <DropdownMenuItem>Mark as Won</DropdownMenuItem>
                   <DropdownMenuItem>Mark as Lost</DropdownMenuItem>
@@ -180,6 +282,51 @@ useEffect(() => {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left Column: Lead Info */}
           <div className="lg:col-span-1 space-y-4">
+            {/* Quick Actions */}
+            <Card className="border-0 shadow-sm bg-primary text-primary-foreground overflow-hidden">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="secondary" className="w-full min-w-0" asChild>
+                    <a href={`tel:${lead.phone}`}>
+                      <Phone className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Call</span>
+                    </a>
+                  </Button>
+                  <Button variant="secondary" className="w-full min-w-0" asChild>
+                    <a href={`mailto:${lead.email}`}>
+                      <Mail className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Email</span>
+                    </a>
+                  </Button>
+                  <Button variant="secondary" className="w-full min-w-0 bg-white/10 hover:bg-white/20 border-0 text-white">
+                    <Calendar className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Schedule</span>
+                  </Button>
+                  <Button 
+                    variant="secondary" 
+                    className="w-full min-w-0 bg-white/10 hover:bg-white/20 border-0 text-white"
+                    onClick={() => window.open(whatsappUrl, "_blank")}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">WhatsApp</span>
+                  </Button>
+                  <Sheet open={quickActionOpen} onOpenChange={setQuickActionOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="secondary" className="w-full col-span-2 mt-1">
+                        <Zap className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Quick Action</span>
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="w-full sm:max-w-xl p-4 sm:p-6 overflow-y-auto">
+                      <SheetHeader>
+                        <SheetTitle>Quick Action</SheetTitle>
+                      </SheetHeader>
+                      <AdminQuickActionForm
+                        lead={lead}
+                        onClose={() => setQuickActionOpen(false)}
+                        refreshData={fetchLeadDetails}
+                      />
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Management */}
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-3">
@@ -213,10 +360,13 @@ useEffect(() => {
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-semibold">Phone</p>
                   <p className="font-medium text-sm break-all">{lead.phone}</p>
-                  <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-2 mt-1 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
-                    <Phone className="h-4 w-4" /> Call
-                  </a>
                 </div>
+                {lead.alternatePhone && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">Alternate Phone</p>
+                    <p className="font-medium text-sm break-all">{lead.alternatePhone}</p>
+                  </div>
+                )}
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-semibold">Email</p>
                   <p className="font-medium text-sm break-all">{lead.email}</p>
@@ -341,13 +491,217 @@ useEffect(() => {
           </div>
         </div>
       </div>
+
+      {/* Edit Lead Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Lead Details</DialogTitle>
+            <DialogDescription>Update the lead's contact and project information. Only admins can perform this action.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input 
+                id="name" 
+                value={editForm.name} 
+                onChange={(e) => setEditForm({...editForm, name: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                value={editForm.email} 
+                onChange={(e) => setEditForm({...editForm, email: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input 
+                id="phone" 
+                value={editForm.phone} 
+                onChange={(e) => setEditForm({...editForm, phone: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="altPhone">Alternate Phone</Label>
+              <Input 
+                id="altPhone" 
+                value={editForm.alternatePhone} 
+                onChange={(e) => setEditForm({...editForm, alternatePhone: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project">Project</Label>
+              <Input 
+                id="project" 
+                value={editForm.project} 
+                onChange={(e) => setEditForm({...editForm, project: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="budget">Budget</Label>
+              <Input 
+                id="budget" 
+                value={editForm.budget} 
+                onChange={(e) => setEditForm({...editForm, budget: e.target.value})} 
+              />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label htmlFor="requirements">Requirements</Label>
+              <Textarea 
+                id="requirements" 
+                value={editForm.requirements} 
+                onChange={(e) => setEditForm({...editForm, requirements: e.target.value})} 
+              />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label htmlFor="notes">Internal Admin Notes</Label>
+              <Textarea 
+                id="notes" 
+                value={editForm.notes} 
+                onChange={(e) => setEditForm({...editForm, notes: e.target.value})} 
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateLead} disabled={isUpdating}>
+              {isUpdating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu"
+function AdminQuickActionForm({
+  lead,
+  onClose,
+  refreshData,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  refreshData: () => Promise<void>;
+}) {
+  const [status, setStatus] = useState<LeadStatus>(lead.status);
+  const [subStatus, setSubStatus] = useState<LeadSubStatus>(lead.subStatus);
+  const [comment, setComment] = useState("");
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`/api/leads/${lead.id}/quickaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: lead.id,
+          status,
+          subStatus,
+          comment,
+          followUpDate,
+          createdBy: "admin", // Explicitly mark as admin action
+        }),
+      });
+      if (!response.ok) throw new Error("Update failed");
+      await refreshData();
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 mt-6">
+      <div className="p-3 rounded-lg bg-secondary/50">
+        <p className="text-sm text-muted-foreground">Lead ID</p>
+        <p className="font-medium">{lead.id}</p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Comment</label>
+        <Textarea
+          placeholder="Add a comment..."
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Status</label>
+          <Select
+            value={status}
+            onValueChange={(v) => setStatus(v as LeadStatus)}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="new">New</SelectItem>
+              <SelectItem value="contacted">Contacted</SelectItem>
+              <SelectItem value="qualified">Qualified</SelectItem>
+              <SelectItem value="negotiation">Negotiation</SelectItem>
+              <SelectItem value="won">Won</SelectItem>
+              <SelectItem value="lost">Lost</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Sub Status</label>
+          <Select
+            value={subStatus}
+            onValueChange={(v) => setSubStatus(v as LeadSubStatus)}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hot">Hot</SelectItem>
+              <SelectItem value="warm">Warm</SelectItem>
+              <SelectItem value="cold">Cold</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Follow-up Date</label>
+        <Input
+          type="datetime-local"
+          value={followUpDate}
+          onChange={(e) => setFollowUpDate(e.target.value)}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="flex gap-2 pt-4">
+        <Button
+          variant="outline"
+          onClick={onClose}
+          className="flex-1"
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          className="flex-1"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+        </Button>
+      </div>
+    </div>
+  )
+}
