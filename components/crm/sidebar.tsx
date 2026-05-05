@@ -34,8 +34,8 @@ const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/leads", label: "All Leads", icon: Users },
-  // { href: "/admin/team", label: "Team", icon: UserCog },
-  // { href: "/admin/allocate", label: "Allocate", icon: Building2 },
+  { href: "/admin/team", label: "Team", icon: UserCog },
+  { href: "/admin/allocate", label: "Allocate", icon: Building2 },
   { href: "/admin/calls", label: "Call Logs", icon: Phone }
 ]
 
