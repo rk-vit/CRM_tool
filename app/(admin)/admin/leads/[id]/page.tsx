@@ -86,6 +86,12 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
   useEffect(() => {
     if (!data?.timeline) return
 
+  const uniqueIds = [...new Set(
+    data.timeline
+      .map((e: TimelineEvent) => e.createdBy)
+      .filter((id: string) => id && id !== "system")
+  )]
+
   uniqueIds.forEach(async (id: string) => {
     if (userNames[id]) return
     try {
