@@ -23,6 +23,14 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription
+} from "@/components/ui/dialog"
 import { useAuth } from "@/lib/auth-context"
 import type { Lead, LeadStatus, SalesExecutive } from "@/lib/types"
 import {
@@ -65,6 +73,7 @@ export default function AdminLeadsPage() {
   const [projects, setProjects] = useState<string[]>([])
   const [executives, setExecutives] = useState<SalesExecutive[]>([])
   const [loading, setLoading] = useState(true)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -82,30 +91,30 @@ export default function AdminLeadsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        const [leadsRes, projectsRes, execRes] = await Promise.all([
-          fetch("/api/leads"),
-          fetch("/api/projects"),
-          fetch("/api/admin/users")
-        ])
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [leadsRes, projectsRes, execRes] = await Promise.all([
+        fetch("/api/leads"),
+        fetch("/api/projects"),
+        fetch("/api/admin/users")
+      ])
 
-        const leadsData = await leadsRes.json()
-        const projectsData = await projectsRes.json()
-        const execData = await execRes.json()
+      const leadsData = await leadsRes.json()
+      const projectsData = await projectsRes.json()
+      const execData = await execRes.json()
 
-        setLeads(Array.isArray(leadsData) ? leadsData : [])
-        setProjects(Array.isArray(projectsData) ? projectsData : [])
-        setExecutives(Array.isArray(execData) ? execData : [])
-      } catch (error) {
-        console.error("Error fetching admin leads data:", error)
-      } finally {
-        setLoading(false)
-      }
+      setLeads(Array.isArray(leadsData) ? leadsData : [])
+      setProjects(Array.isArray(projectsData) ? projectsData : [])
+      setExecutives(Array.isArray(execData) ? execData : [])
+    } catch (error) {
+      console.error("Error fetching admin leads data:", error)
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchData()
   }, [])
 
@@ -216,9 +225,20 @@ export default function AdminLeadsPage() {
         {/* Actions Row */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="flex gap-2">
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" /> Add New Lead
-            </Button>
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <UserPlus className="h-4 w-4 mr-2" /> Add New Lead
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] sm:max-w-md rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add Manual Lead</DialogTitle>
+                  <DialogDescription>Create a manual entry for walk-in clients.</DialogDescription>
+                </DialogHeader>
+                <AddLeadForm onSuccess={() => { setAddDialogOpen(false); fetchData() }} />
+              </DialogContent>
+            </Dialog>
             <Button variant="outline" onClick={() => downloadLeadsCSV(statusFilter)}>
               <Download className="h-4 w-4 mr-2" /> Export
             </Button>
@@ -391,5 +411,39 @@ export default function AdminLeadsPage() {
         )}
       </div>
     </div>
+  )
+}
+
+function AddLeadForm({ onSuccess }: { onSuccess: () => void }) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [form, setForm] = useState({ name: "", phone: "", email: "", project: "", source: "Walk-in" })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    try {
+      const res = await fetch("/api/leads/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      })
+      if (res.ok) onSuccess()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+      <div className="space-y-1"><label className="text-[10px] font-bold uppercase text-muted-foreground">Full Name</label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1"><label className="text-[10px] font-bold uppercase text-muted-foreground">Phone</label><Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required /></div>
+        <div className="space-y-1"><label className="text-[10px] font-bold uppercase text-muted-foreground">Email</label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+      </div>
+      <div className="space-y-1"><label className="text-[10px] font-bold uppercase text-muted-foreground">Project</label><Input value={form.project} onChange={e => setForm({ ...form, project: e.target.value })} /></div>
+      <Button type="submit" className="w-full h-10 mt-2" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Save Lead"}</Button>
+    </form>
   )
 }

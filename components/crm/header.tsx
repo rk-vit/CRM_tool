@@ -16,7 +16,7 @@ import { Bell, Search, PhoneIncoming } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useState, useEffect, useCallback } from "react"
 import { UnknownCallersPanel } from "./unknown-callers-panel"
-
+import Link from "next/link"
 
 interface HeaderProps {
   title: string
@@ -24,7 +24,7 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle }: HeaderProps) {
-  const { user,logout } = useAuth()
+  const { user, logout } = useAuth()
   const [unknownCallersOpen, setUnknownCallersOpen] = useState(false)
   const [unknownCount, setUnknownCount] = useState(0)
 
@@ -99,7 +99,7 @@ export function Header({ title, subtitle }: HeaderProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <Link href="/settings"><DropdownMenuItem>Settings</DropdownMenuItem></Link>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout} className="text-destructive">Logout</DropdownMenuItem>
             </DropdownMenuContent>

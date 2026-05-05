@@ -83,14 +83,8 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
     notes: ""
   })
 
-useEffect(() => {
-  if (!data?.timeline) return
-  
-  const uniqueIds = [...new Set(
-    data.timeline
-      .map((e: TimelineEvent) => e.createdBy)
-      .filter((id: string) => id && id !== "system")
-  )]
+  useEffect(() => {
+    if (!data?.timeline) return
 
   uniqueIds.forEach(async (id: string) => {
     if (userNames[id]) return
@@ -246,7 +240,7 @@ useEffect(() => {
                     <Calendar className="h-3 w-3 shrink-0" /> Added {format(new Date(lead.createdAt), "MMM dd, yyyy")}
                   </span>
                   <span className="flex items-center gap-1">
-                    <User className="h-3 w-3 shrink-0" /> Assigned to:&nbsp;<span className="font-medium text-primary">{lead.assigned_users?.join(", ") || lead.assigned_to || "Unassigned"}</span>
+                    <User className="h-3 w-3 shrink-0" /> Assigned to:&nbsp;<span className="font-medium text-primary">{lead.assignedUserNames?.join(", ") || lead.assignedToName || "Unassigned"}</span>
                   </span>
                 </div>
               </div>
@@ -336,7 +330,7 @@ useEffect(() => {
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Reassign Executive</p>
                   <Button variant="outline" className="w-full justify-between text-sm">
-                    <span className="truncate">{lead.assigned_users?.join(", ") || lead.assigned_to || "Select Executive"}</span>
+                    <span className="truncate">{lead.assignedUserNames?.join(", ") || lead.assignedToName || "Unassigned"}</span>
                     <Plus className="h-4 w-4 shrink-0 ml-2" />
                   </Button>
                 </div>

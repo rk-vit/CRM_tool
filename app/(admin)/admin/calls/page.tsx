@@ -70,7 +70,6 @@ export default function CallsPage() {
 
   const matchesAssigned =
   assignedFilter === "all" ||
-  call.assigned_to === assignedFilter ||
   call.assignedTo === assignedFilter ||
   call.user_id === assignedFilter
 
@@ -86,7 +85,7 @@ export default function CallsPage() {
 const uniqueUsers = [
   ...new Set(
     calls
-      .map(c => c.assigned_to || c.assignedTo || c.user_id)
+      .map(c => c.assignedTo || c.user_id)
       .filter(Boolean)
   )]  
   if (loading && calls.length === 0) {

@@ -10,7 +10,7 @@ export async function GET() {
         COUNT(DISTINCT l.id) FILTER (WHERE l.status = 'won') as "leadsConverted",
         COUNT(DISTINCT c.id) as "totalCalls"
       FROM users u
-      LEFT JOIN leads l ON u.id = l.assigned_to
+      LEFT JOIN leads l ON (u.id = ANY(l.assigned_users) OR (l.assigned_users IS NULL AND u.id = l.assigned_to))
       LEFT JOIN call_logs c ON u.id = c.assigned_to
       WHERE u.role = 'sales'
       GROUP BY u.id
