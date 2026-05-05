@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider"
 import { FloatingCallWidget } from "@/app/(sales)/call_widget/call_widget"
 import { useCall } from "@/lib/call-context"
 
@@ -52,13 +53,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <SessionProvider>
-          <AuthProvider>{children}</AuthProvider>
-        </SessionProvider>
-        <Toaster />  
-        <Analytics />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <SessionProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </SessionProvider>
+          <Toaster />  
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -26,8 +26,10 @@ export interface Lead {
   subStatus: LeadSubStatus
   source: LeadSource
   medium: string
-  assigned_to: string
-  assigned_users?: string[]
+  assignedTo: string
+  assignedToName?: string
+  assignedUsers?: string[]
+  assignedUserNames?: string[]
   createdAt: string
   updatedAt: string
   followUpDate?: string
