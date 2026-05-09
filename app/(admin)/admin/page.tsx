@@ -20,11 +20,13 @@ import {
   ArrowRight,
   Loader2,
   PieChart,
-  BarChart3
+  BarChart3,
+  Phone
 } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import type { Lead, TimelineEvent, DashboardStats, SalesExecutive } from "@/lib/types"
+
 
 export default function AdminDashboard() {
   const { user } = useAuth()
@@ -34,18 +36,25 @@ export default function AdminDashboard() {
   const [recentTimeline, setRecentTimeline] = useState<TimelineEvent[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayString = new Date().toISOString().split("T")[0];
+  const scrollToSection = (id: string) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: "smooth" });
+  }
+};
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true)
         const [statsRes, leadsRes, execRes, timelineRes] = await Promise.all([
           fetch("/api/admin/stats"),
-          fetch("/api/leads?limit=5"),
+          fetch("/api/leads"),
           fetch("/api/admin/users"),
           fetch("/api/timeline?limit=5")
         ])
-        console.log("Stats Response:", statsRes)
 
         const statsData = await statsRes.json()
         const leadsData = await leadsRes.json()
@@ -104,6 +113,7 @@ export default function AdminDashboard() {
             value={stats?.todayFollowUp || 0}
             icon={Calendar}
             variant="warning"
+            onClick={() => scrollToSection("today-follow")}
           />
           <StatsCard
             title="Missed Follow-up"
@@ -181,7 +191,7 @@ export default function AdminDashboard() {
                       >
                         <td className="py-2 md:py-3 pr-3 truncate overflow-hidden max-w-0">
                           {lead.name}
-                        </td>
+                        </td> 
                         <td className="py-2 md:py-3 pr-3 truncate overflow-hidden max-w-0 text-muted-foreground">
                           {lead.project}
                         </td>
@@ -287,21 +297,41 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <PieChart className="h-5 w-5 shrink-0" /> Leads by Project
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[180px] md:h-[240px] flex items-center justify-center border-2 border-dashed rounded-xl">
-                <p className="text-sm text-muted-foreground italic">
-                  Project chart will be live after more data is added
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <Card id="today-follow" className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold">Today&apos;s Follow-ups</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {leads.filter(l => l.followUpDate?.startsWith(todayString)).slice(0, 6).map((lead) => (
+                <Link
+                  href={`/leads/${lead.id}`}
+                  key={lead.id}
+                  className="flex items-center gap-3 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                    {lead.name.split(" ").map(n => n[0]).join("")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{lead.name}</p>
+                    Don't show phone number as of now
+                    <p className="text-xs text-muted-foreground">{lead.phone}</p>
+                   
+                  </div>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href={`tel:${lead.phone}`}>
+                      <Phone className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                 
+                </Link>
+              ))}
+              {leads.filter(l => l.followUpDate?.startsWith(todayString)).length === 0 && (
+                <p className="col-span-full text-center py-4 text-sm text-muted-foreground">No follow-ups scheduled for today.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
         </div>
       </div>
     </div>

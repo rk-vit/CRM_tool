@@ -43,13 +43,13 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
   useEffect(() => {
     if (!data?.timeline) return
 
-    const uniqueIds = [...new Set(
+    const timelineUserIds = Array.from(new Set(
       data.timeline
         .map((e: TimelineEvent) => e.createdBy)
         .filter((id: string) => id && id !== "system")
-    )]
+    ));
 
-    uniqueIds.forEach(async (id: string) => {
+    timelineUserIds.forEach(async (id: string) => {
       if (userNames[id]) return
       try {
         const res = await fetch(`/api/sales/${id}`)
@@ -153,7 +153,6 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
               </div>
             </div>
 
-            {/* Status + actions */}
             <div className="flex items-center gap-2">
               <Badge className={`${getStatusColor(lead.status)} px-3 py-1 text-xs`}>
                 {lead.status.toUpperCase()}

@@ -50,7 +50,7 @@ export default function SalesDashboard() {
         const [statsRes, leadsRes, timelineRes] = await Promise.all([
           fetch(`/api/dashboard/stats?assignedTo=${user.id}`),
           fetch(`/api/leads?assignedTo=${user.id}&limit=5`),
-          fetch(`/api/timeline?limit=5`)
+          fetch(`/api/timeline?limit=7`)
         ])
 
         const statsData = await statsRes.json()
