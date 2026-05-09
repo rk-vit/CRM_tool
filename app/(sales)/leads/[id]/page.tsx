@@ -273,22 +273,25 @@ export default function LeadDetailsPage({ params }: { params: Promise<{ id: stri
 
   const { lead, timeline, calls, emails, comments } = data;
   const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
-    `Dear ${lead.name},`,
-    ``,
-    `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
-    ``,
-    `Project Preview:`,
-    `https://www.instagram.com/reel/DYHceT2JbV_/?igsh=cmlhMHB4NmR5bTVm`,
-    ``,
-    `Location (Google Maps):`,
-    `https://maps.google.com/?q=Madhavaram,Chennai`,
-    ``,
-    `We would be pleased to discuss the project details with you at your convenience. Kindly let us know a suitable time to connect.`,
-    ``,
-    `Best Regards,`,
-    `SRIRAM BUILDERS`,
-    `95 0094 0094`,
-  ].join("\n"))}`;
+  `Dear ${lead.name},`,
+  ``,
+  `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
+  ``,
+  `Project Gallery:`,
+  `https://photos.app.goo.gl/3sJssYN7bRqu3QGWA`,
+  ``,
+  `Project Preview:`,
+  `https://www.instagram.com/reel/DYHceT2JbV_/?igsh=cmlhMHB4NmR5bTVm`,
+  ``,
+  `Location (Google Maps):`,
+  `https://maps.google.com/?q=Madhavaram,Chennai`,
+  ``,
+  `We would be pleased to discuss the project details with you at your convenience. Kindly let us know a suitable time to connect.`,
+  ``,
+  `Best Regards,`,
+  `SRIRAM BUILDERS`,
+  `95 0094 0094`,
+].join("\n"))}`;
 
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden w-full">

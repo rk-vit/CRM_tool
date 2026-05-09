@@ -190,10 +190,13 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
 
   const { lead, timeline, calls, emails, comments } = data
 
-  const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
+    const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
     `Dear ${lead.name},`,
     ``,
     `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
+    ``,
+    `Project Gallery:`,
+    `https://photos.app.goo.gl/3sJssYN7bRqu3QGWA`,
     ``,
     `Project Preview:`,
     `https://www.instagram.com/reel/DYHceT2JbV_/?igsh=cmlhMHB4NmR5bTVm`,
