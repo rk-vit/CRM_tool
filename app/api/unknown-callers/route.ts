@@ -24,7 +24,7 @@ export async function GET() {
 
     const mapped = callers.map((c: any) => ({
       id: c.id,
-      phone: isAdmin ? c.phone : maskPhone(c.phone),
+      phone: isAdmin ? c.phone : c.phone,
       exotelCallSid: c.exotel_call_sid,
       callDuration: c.call_duration,
       callStatus: c.call_status,

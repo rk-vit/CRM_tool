@@ -6,6 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { AppLauncher } from '@capacitor/app-launcher';
+import { Browser } from '@capacitor/browser';
+
 import {
   Phone,
   Mail,
@@ -54,8 +59,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { useSession } from "next-auth/react";
 
 export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+
   const { id } = use(params)
   const [data, setData] = useState<{
     lead: Lead;
@@ -189,7 +196,7 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
     `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
     ``,
     `Project Preview:`,
-    `https://www.instagram.com/reel/DVTT0ImAHl9/?igsh=aHF1azk4M3dld3o3`,
+    `https://www.instagram.com/reel/DYHceT2JbV_/?igsh=cmlhMHB4NmR5bTVm`,
     ``,
     `Location (Google Maps):`,
     `https://maps.google.com/?q=Madhavaram,Chennai`,
@@ -291,19 +298,25 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
                       <Phone className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Call</span>
                     </a>
                   </Button>
-                  <Button variant="secondary" className="w-full min-w-0" asChild>
+                  {/* <Button variant="secondary" className="w-full min-w-0" asChild>
                     <a href={`mailto:${lead.email}`}>
                       <Mail className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Email</span>
                     </a>
                   </Button>
-
-                  <Button 
-                    variant="secondary" 
-                    className="w-full min-w-0 bg-white/10 hover:bg-white/20 border-0 text-white"
-                    onClick={() => window.open(whatsappUrl, "_blank")}
+                  */}
+                  <button
+                    onClick={async () => {
+                      if (Capacitor.isNativePlatform()) {
+                        await Browser.open({ url: whatsappUrl });
+                      } else {
+                        window.open(whatsappUrl, "_blank");
+                      }
+                    }}
+                    className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
                   >
-                    <MessageSquare className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">WhatsApp</span>
-                  </Button>
+                    <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
+                    <span className="truncate">Whatsapp</span>
+                  </button>
                   <Sheet open={quickActionOpen} onOpenChange={setQuickActionOpen}>
                     <SheetTrigger asChild>
                       <Button variant="secondary" className="w-full col-span-2 mt-1">
@@ -585,6 +598,8 @@ function AdminQuickActionForm({
   onClose: () => void;
   refreshData: () => Promise<void>;
 }) {
+  const { data: session } = useSession();
+
   const [status, setStatus] = useState<LeadStatus>(lead.status);
   const [subStatus, setSubStatus] = useState<LeadSubStatus>(lead.subStatus);
   const [comment, setComment] = useState("");
@@ -603,7 +618,7 @@ function AdminQuickActionForm({
           subStatus,
           comment,
           followUpDate,
-          createdBy: "admin", // Explicitly mark as admin action
+          createdBy: session?.user?.id, // Explicitly mark as admin action
         }),
       });
       if (!response.ok) throw new Error("Update failed");
