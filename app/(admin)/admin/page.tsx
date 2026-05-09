@@ -30,8 +30,20 @@ import type { Lead, TimelineEvent, DashboardStats, SalesExecutive } from "@/lib/
 
 export default function AdminDashboard() {
   const { user } = useAuth()
+  const router = useRouter()
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayString = new Date().toISOString().split("T")[0];
   const [stats, setStats] = useState<any>(null)
   const [leads, setLeads] = useState<Lead[]>([])
+  const [allLeads, setAllLeads] = useState<Lead[]>([])
   const [executives, setExecutives] = useState<SalesExecutive[]>([])
   const [recentTimeline, setRecentTimeline] = useState<TimelineEvent[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,20 +61,23 @@ export default function AdminDashboard() {
     async function fetchData() {
       try {
         setLoading(true)
-        const [statsRes, leadsRes, execRes, timelineRes] = await Promise.all([
+        const [statsRes, leadsRes, execRes, timelineRes, allLeadsRes] = await Promise.all([
           fetch("/api/admin/stats"),
           fetch("/api/leads"),
           fetch("/api/admin/users"),
-          fetch("/api/timeline?limit=5")
+          fetch("/api/timeline?limit=5"),
+          fetch("/api/leads")
         ])
 
         const statsData = await statsRes.json()
         const leadsData = await leadsRes.json()
         const execData = await execRes.json()
         const timelineData = await timelineRes.json()
+        const allLeadsData = await allLeadsRes.json()
 
         setStats(statsData)
         setLeads(Array.isArray(leadsData) ? leadsData : [])
+        setAllLeads(Array.isArray(allLeadsData) ? allLeadsData : [])
         setExecutives(Array.isArray(execData) ? execData : [])
         setRecentTimeline(Array.isArray(timelineData) ? timelineData : [])
       } catch (error) {
@@ -114,12 +129,14 @@ export default function AdminDashboard() {
             icon={Calendar}
             variant="warning"
             onClick={() => scrollToSection("today-follow")}
+            onClick={() => scrollToSection("today-follow")}
           />
           <StatsCard
             title="Missed Follow-up"
             value={stats?.missedFollowUp || 0}
             icon={AlertCircle}
             variant="destructive"
+            onClick={() => scrollToSection("missed-follow")}
           />
           <StatsCard
             title="Booked"
@@ -333,6 +350,81 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
         </div>
+
+        {/* Today's Follow-ups */}
+        <Card id="today-follow" className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold">Today&apos;s Follow-ups</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {allLeads.filter(l => l.followUpDate?.startsWith(todayString)).slice(0, 6).map((lead) => (
+                <Link
+                  href={`/admin/leads/${lead.id}`}
+                  key={lead.id}
+                  className="flex items-center gap-3 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                    {lead.name.split(" ").map((n: string) => n[0]).join("")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{lead.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{lead.project}</p>
+                  </div>
+                  <Badge className="text-[10px] shrink-0">
+                    {lead.assignedUserNames?.join(", ") || lead.assignedToName || "Unassigned"}
+                  </Badge>
+                </Link>
+              ))}
+              {allLeads.filter(l => l.followUpDate?.startsWith(todayString)).length === 0 && (
+                <p className="col-span-full text-center py-4 text-sm text-muted-foreground">No follow-ups scheduled for today.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Missed Follow Ups */}
+        <Card id="missed-follow" className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold">Missed Follow Ups</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {allLeads
+                .filter(l => {
+                  if (!l.followUpDate) return false;
+                  const followUp = new Date(l.followUpDate);
+                  return followUp < today;
+                })
+                .slice(0, 6)
+                .map((lead) => (
+                  <Link
+                    href={`/admin/leads/${lead.id}`}
+                    key={lead.id}
+                    className="flex items-center gap-3 p-3 sm:p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                      {lead.name.split(" ").map((n: string) => n[0]).join("")}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{lead.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{lead.project}</p>
+                    </div>
+                    <Badge className="text-[10px] shrink-0">
+                      {lead.assignedUserNames?.join(", ") || lead.assignedToName || "Unassigned"}
+                    </Badge>
+                  </Link>
+                ))}
+              {allLeads.filter(l => {
+                if (!l.followUpDate) return false;
+                const followUp = new Date(l.followUpDate);
+                return followUp < today;
+              }).length === 0 && (
+                <p className="col-span-full text-center py-4 text-sm text-muted-foreground">No missed follow-ups.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

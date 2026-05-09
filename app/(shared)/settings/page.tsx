@@ -122,7 +122,7 @@ export default function SettingsPage() {
             <CardDescription>Update your password to keep your account secure.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+            <form className="space-y-4 max-w-md">
               <div className="space-y-2">
                 <Label htmlFor="current-password">Current Password</Label>
                 <Input

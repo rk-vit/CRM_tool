@@ -6,8 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { AppLauncher } from '@capacitor/app-launcher';
+import { Browser } from '@capacitor/browser';
+
 import {
   Phone,
+  PhoneCall,
+  PhoneOff,
   Mail,
   Calendar,
   Clock,
@@ -21,13 +28,45 @@ import {
   Loader2,
   ExternalLink,
   Plus,
-  Building
+  Building,
+  Edit,
+  Zap,
+  Minimize2,
+  Maximize2
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
-import type { Lead, TimelineEvent, CallLog, EmailLog, Comment } from "@/lib/types"
+import type { Lead, TimelineEvent, CallLog, EmailLog, Comment, LeadStatus, LeadSubStatus } from "@/lib/types"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { useSession } from "next-auth/react";
 
 export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+
   const { id } = use(params)
   const [data, setData] = useState<{
     lead: Lead;
@@ -39,47 +78,208 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userNames, setUserNames] = useState<Record<string, string>>({})
+  const [quickActionOpen, setQuickActionOpen] = useState(false)
+
+  // Call State
+  const [callConfirmOpen, setCallConfirmOpen] = useState(false)
+  const [isCalling, setIsCalling] = useState(false)
+  const [callDuration, setCallDuration] = useState(0)
+  const [callLoading, setCallLoading] = useState(false)
+  const [callError, setCallError] = useState<string | null>(null)
+  const [callMinimized, setCallMinimized] = useState(false)
+  const [callSid, setCallSid] = useState<string | null>(null)
+  const [callResult, setCallResult] = useState<string | null>(null)
+
+  // Timer for the calling screen
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (isCalling) {
+      interval = setInterval(() => {
+        setCallDuration((prev) => prev + 1)
+      }, 1000)
+    } else {
+      setCallDuration(0)
+    }
+    return () => clearInterval(interval)
+  }, [isCalling])
+
+  // Poll Exotel callback for call status
+  useEffect(() => {
+    if (!isCalling || !callSid) return
+
+    const startTime = Date.now()
+    const TIMEOUT_MS = 90_000
+
+    const pollInterval = setInterval(async () => {
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        clearInterval(pollInterval)
+        setIsCalling(false)
+        setCallSid(null)
+        setCallResult("Call timed out — no response from server")
+        setTimeout(() => setCallResult(null), 5000)
+        fetchLeadDetails()
+        return
+      }
+
+      try {
+        const res = await fetch(`/api/calls/status?callSid=${callSid}`)
+        if (!res.ok) return
+        const data = await res.json()
+
+        if (data.ended) {
+          clearInterval(pollInterval)
+          setIsCalling(false)
+          setCallSid(null)
+          setCallResult(
+            data.status === "answered"
+              ? `Call completed — ${Math.floor(data.duration / 60)}m ${data.duration % 60}s`
+              : data.status === "busy"
+              ? "Lead was busy"
+              : "Call was not answered"
+          )
+          setTimeout(() => setCallResult(null), 5000)
+          fetchLeadDetails()
+        }
+      } catch (err) {
+        console.error("Poll error:", err)
+      }
+    }, 5000)
+
+    return () => clearInterval(pollInterval)
+  }, [isCalling, callSid])
+
+  const handleCallClick = () => {
+    setCallError(null)
+    setCallConfirmOpen(true)
+  }
+
+  const handleConfirmCall = async () => {
+    setCallLoading(true)
+    setCallError(null)
+    try {
+      const res = await fetch("/api/calls/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId: lead.id }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || "Failed to initiate call")
+      setCallSid(result.callSid || null)
+      setCallConfirmOpen(false)
+      setIsCalling(true)
+    } catch (err: any) {
+      setCallError(err.message || "Something went wrong. Please try again.")
+    } finally {
+      setCallLoading(false)
+    }
+  }
+
+  const handleEndCall = () => {
+    setIsCalling(false)
+    setCallSid(null)
+    setCallResult("Call ended by agent")
+    setTimeout(() => setCallResult(null), 5000)
+    fetchLeadDetails()
+  }
+
+  const formatCallDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, "0")
+    const secs = (seconds % 60).toString().padStart(2, "0")
+    return `${mins}:${secs}`
+  }
+
+  // Edit State
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    alternatePhone: "",
+    project: "",
+    budget: "",
+    requirements: "",
+    notes: ""
+  })
 
   useEffect(() => {
     if (!data?.timeline) return
 
-    const timelineUserIds = Array.from(new Set(
-      data.timeline
-        .map((e: TimelineEvent) => e.createdBy)
-        .filter((id: string) => id && id !== "system")
-    ));
+  const uniqueIds = [...new Set(
+    data.timeline
+      .map((e: TimelineEvent) => e.createdBy)
+      .filter((id: string) => id && id !== "system")
+  )]
 
-    timelineUserIds.forEach(async (id: string) => {
-      if (userNames[id]) return
-      try {
-        const res = await fetch(`/api/sales/${id}`)
-        const data2 = await res.json()
-        console.log(data2);
-        setUserNames(prev => ({ ...prev, [id]: data2.name }))
-      } catch {
-        setUserNames(prev => ({ ...prev, [id]: id }))
+  uniqueIds.forEach(async (id: string) => {
+    if (userNames[id]) return
+    try {
+      const res = await fetch(`/api/sales/${id}`)
+      const data2 = await res.json()
+      setUserNames(prev => ({ ...prev, [id]: data2.name }))
+    } catch {
+      setUserNames(prev => ({ ...prev, [id]: id }))
+    }
+  })
+}, [data])
+
+  const fetchLeadDetails = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/leads/${id}`)
+      if (!res.ok) throw new Error("Failed to fetch lead details")
+      const json = await res.json()
+      setData(json)
+
+      // Initialize edit form
+      if (json.lead) {
+        setEditForm({
+          name: json.lead.name,
+          email: json.lead.email,
+          phone: json.lead.phone,
+          alternatePhone: json.lead.alternatePhone || "",
+          project: json.lead.project,
+          budget: json.lead.budget || "",
+          requirements: json.lead.requirements || "",
+          notes: json.lead.notes || ""
+        })
       }
-    })
-  }, [data])
+    } catch (err) {
+      console.error(err)
+      setError("Could not load lead details. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function fetchLeadDetails() {
-      try {
-        setLoading(true)
-        const res = await fetch(`/api/leads/${id}`)
-        if (!res.ok) throw new Error("Failed to fetch lead details")
-        const json = await res.json()
-        setData(json)
-      } catch (err) {
-        console.error(err)
-        setError("Could not load lead details. Please try again.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchLeadDetails()
   }, [id])
+
+  const handleUpdateLead = async () => {
+    try {
+      setIsUpdating(true)
+      const res = await fetch(`/api/leads/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm)
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || "Failed to update lead")
+      }
+      
+      await fetchLeadDetails()
+      setIsEditDialogOpen(false)
+      toast.success("Lead details updated successfully")
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err.message || "Failed to update lead details")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -101,6 +301,27 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
   }
 
   const { lead, timeline, calls, emails, comments } = data
+
+    const whatsappUrl = `https://wa.me/${lead.phone.replace(/\D/g, "")}?text=${encodeURIComponent([
+    `Dear ${lead.name},`,
+    ``,
+    `Thank you for expressing interest in our project "${lead.project}" by SRIRAM BUILDERS located in Chennai, Madhavaram.`,
+    ``,
+    `Project Gallery:`,
+    `https://photos.app.goo.gl/3sJssYN7bRqu3QGWA`,
+    ``,
+    `Project Preview:`,
+    `https://www.instagram.com/reel/DYHceT2JbV_/?igsh=cmlhMHB4NmR5bTVm`,
+    ``,
+    `Location (Google Maps):`,
+    `https://maps.google.com/?q=Madhavaram,Chennai`,
+    ``,
+    `We would be pleased to discuss the project details with you at your convenience. Kindly let us know a suitable time to connect.`,
+    ``,
+    `Best Regards,`,
+    `SRIRAM BUILDERS`,
+    `95 0094 0094`,
+  ].join("\n"))}`;
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -164,6 +385,9 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+                    <Edit className="h-4 w-4 mr-2" /> Edit Details
+                  </DropdownMenuItem>
                   <DropdownMenuItem>Reassign Lead</DropdownMenuItem>
                   <DropdownMenuItem>Mark as Won</DropdownMenuItem>
                   <DropdownMenuItem>Mark as Lost</DropdownMenuItem>
@@ -179,6 +403,53 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left Column: Lead Info */}
           <div className="lg:col-span-1 space-y-4">
+            {/* Quick Actions */}
+            <Card className="border-0 shadow-sm bg-primary text-primary-foreground overflow-hidden">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="secondary" className="w-full min-w-0" onClick={handleCallClick}>
+                    <Phone className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Call</span>
+                  </Button>
+                  {/* <Button variant="secondary" className="w-full min-w-0" asChild>
+                    <a href={`mailto:${lead.email}`}>
+                      <Mail className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Email</span>
+                    </a>
+                  </Button>
+                  */}
+                  <button
+                    onClick={async () => {
+                      if (Capacitor.isNativePlatform()) {
+                        await Browser.open({ url: whatsappUrl });
+                      } else {
+                        window.open(whatsappUrl, "_blank");
+                      }
+                    }}
+                    className="w-full min-w-0 bg-white/10 hover:bg-white/20 text-white flex items-center justify-center rounded-md px-3 py-2 text-sm"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
+                    <span className="truncate">Whatsapp</span>
+                  </button>
+                  <Sheet open={quickActionOpen} onOpenChange={setQuickActionOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="secondary" className="w-full col-span-2 mt-1">
+                        <Zap className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Quick Action</span>
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="w-full sm:max-w-xl p-4 sm:p-6 overflow-y-auto">
+                      <SheetHeader>
+                        <SheetTitle>Quick Action</SheetTitle>
+                      </SheetHeader>
+                      <AdminQuickActionForm
+                        lead={lead}
+                        onClose={() => setQuickActionOpen(false)}
+                        refreshData={fetchLeadDetails}
+                      />
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Management */}
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-3">
@@ -212,10 +483,13 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-semibold">Phone</p>
                   <p className="font-medium text-sm break-all">{lead.phone}</p>
-                  <a href={`tel:${lead.phone}`} className="inline-flex items-center gap-2 mt-1 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
-                    <Phone className="h-4 w-4" /> Call
-                  </a>
                 </div>
+                {lead.alternatePhone && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase font-semibold">Alternate Phone</p>
+                    <p className="font-medium text-sm break-all">{lead.alternatePhone}</p>
+                  </div>
+                )}
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground uppercase font-semibold">Email</p>
                   <p className="font-medium text-sm break-all">{lead.email}</p>
@@ -340,13 +614,321 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
           </div>
         </div>
       </div>
+
+      {/* Edit Lead Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Lead Details</DialogTitle>
+            <DialogDescription>Update the lead's contact and project information. Only admins can perform this action.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input 
+                id="name" 
+                value={editForm.name} 
+                onChange={(e) => setEditForm({...editForm, name: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                value={editForm.email} 
+                onChange={(e) => setEditForm({...editForm, email: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input 
+                id="phone" 
+                value={editForm.phone} 
+                onChange={(e) => setEditForm({...editForm, phone: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="altPhone">Alternate Phone</Label>
+              <Input 
+                id="altPhone" 
+                value={editForm.alternatePhone} 
+                onChange={(e) => setEditForm({...editForm, alternatePhone: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="project">Project</Label>
+              <Input 
+                id="project" 
+                value={editForm.project} 
+                onChange={(e) => setEditForm({...editForm, project: e.target.value})} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="budget">Budget</Label>
+              <Input 
+                id="budget" 
+                value={editForm.budget} 
+                onChange={(e) => setEditForm({...editForm, budget: e.target.value})} 
+              />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label htmlFor="requirements">Requirements</Label>
+              <Textarea 
+                id="requirements" 
+                value={editForm.requirements} 
+                onChange={(e) => setEditForm({...editForm, requirements: e.target.value})} 
+              />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label htmlFor="notes">Internal Admin Notes</Label>
+              <Textarea 
+                id="notes" 
+                value={editForm.notes} 
+                onChange={(e) => setEditForm({...editForm, notes: e.target.value})} 
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateLead} disabled={isUpdating}>
+              {isUpdating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Call Confirmation Dialog */}
+      <Dialog open={callConfirmOpen} onOpenChange={setCallConfirmOpen}>
+        <DialogContent className="sm:max-w-md mx-4 sm:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Phone className="h-5 w-5 text-green-600" />
+              </div>
+              Confirm Call
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to call{" "}
+              <span className="font-semibold text-foreground">{lead.name}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          {callError && (
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+              <p className="text-sm text-red-600 dark:text-red-400">{callError}</p>
+            </div>
+          )}
+          <DialogFooter className="pt-4 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCallConfirmOpen(false)} disabled={callLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmCall} className="bg-green-600 hover:bg-green-700 text-white" disabled={callLoading}>
+              {callLoading ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting...</>
+              ) : (
+                <><PhoneCall className="h-4 w-4 mr-2" /> Yes, Call Now</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Calling Widget */}
+      {isCalling &&
+        (callMinimized ? (
+          <button
+            onClick={() => setCallMinimized(false)}
+            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex items-center gap-3 px-4 py-3 rounded-full bg-slate-900 border border-slate-700 shadow-2xl shadow-black/40 hover:shadow-black/60 transition-all duration-300 hover:scale-105 group cursor-pointer"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-green-500/30 animate-ping" style={{ animationDuration: "2s" }} />
+              <div className="relative h-8 w-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
+                <Phone className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-medium">{lead.name.split(" ")[0]}</span>
+              <span className="text-green-400 font-mono text-sm">{formatCallDuration(callDuration)}</span>
+            </div>
+            <Maximize2 className="h-4 w-4 text-slate-400 group-hover:text-white transition-colors" />
+          </button>
+        ) : (
+          <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] w-[calc(100vw-2rem)] max-w-[320px] rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-slate-700/50" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)' }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/50">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-green-400 text-xs font-semibold tracking-widest uppercase">On Call</span>
+              </div>
+              <button onClick={() => setCallMinimized(true)} className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all">
+                <Minimize2 className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-6 py-5 flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping" style={{ animationDuration: "2s" }} />
+                <div className="absolute -inset-2 rounded-full border border-green-500/15 animate-pulse" style={{ animationDuration: "2s" }} />
+                <div className="relative h-16 w-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20">
+                  <span className="text-xl font-bold text-white">
+                    {lead.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                  </span>
+                </div>
+              </div>
+              <div className="text-center space-y-0.5">
+                <p className="text-white font-semibold text-base">{lead.name}</p>
+              </div>
+              <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10">
+                <p className="text-white font-mono text-sm tracking-widest">{formatCallDuration(callDuration)}</p>
+              </div>
+            </div>
+            <div className="px-6 pb-5 flex justify-center">
+              <button onClick={handleEndCall} className="group flex items-center gap-2 px-6 py-2.5 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-200 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95">
+                <PhoneOff className="h-4 w-4 text-white transition-transform group-hover:rotate-[135deg] duration-300" />
+                <span className="text-white text-sm font-medium">End Call</span>
+              </button>
+            </div>
+          </div>
+        ))
+      }
+
+      {/* Call Result Toast */}
+      {callResult && (
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300 max-w-[calc(100vw-2rem)]">
+          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl shadow-black/40">
+            <div className={`h-3 w-3 shrink-0 rounded-full ${callResult?.startsWith("Call completed") ? "bg-green-400" : "bg-amber-400"}`} />
+            <span className="text-white text-sm font-medium">{callResult}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu"
+function AdminQuickActionForm({
+  lead,
+  onClose,
+  refreshData,
+}: {
+  lead: Lead;
+  onClose: () => void;
+  refreshData: () => Promise<void>;
+}) {
+  const { data: session } = useSession();
+
+  const [status, setStatus] = useState<LeadStatus>(lead.status);
+  const [subStatus, setSubStatus] = useState<LeadSubStatus>(lead.subStatus);
+  const [comment, setComment] = useState("");
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`/api/leads/${lead.id}/quickaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: lead.id,
+          status,
+          subStatus,
+          comment,
+          followUpDate,
+          createdBy: session?.user?.id, // Explicitly mark as admin action
+        }),
+      });
+      if (!response.ok) throw new Error("Update failed");
+      await refreshData();
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 mt-6">
+      <div className="p-3 rounded-lg bg-secondary/50">
+        <p className="text-sm text-muted-foreground">Lead ID</p>
+        <p className="font-medium">{lead.id}</p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Comment</label>
+        <Textarea
+          placeholder="Add a comment..."
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Status</label>
+          <Select
+            value={status}
+            onValueChange={(v) => setStatus(v as LeadStatus)}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="new">New</SelectItem>
+              <SelectItem value="contacted">Contacted</SelectItem>
+              <SelectItem value="qualified">Qualified</SelectItem>
+              <SelectItem value="negotiation">Negotiation</SelectItem>
+              <SelectItem value="won">Won</SelectItem>
+              <SelectItem value="lost">Lost</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Sub Status</label>
+          <Select
+            value={subStatus}
+            onValueChange={(v) => setSubStatus(v as LeadSubStatus)}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hot">Hot</SelectItem>
+              <SelectItem value="warm">Warm</SelectItem>
+              <SelectItem value="cold">Cold</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Follow-up Date</label>
+        <Input
+          type="datetime-local"
+          value={followUpDate}
+          onChange={(e) => setFollowUpDate(e.target.value)}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="flex gap-2 pt-4">
+        <Button
+          variant="outline"
+          onClick={onClose}
+          className="flex-1"
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          className="flex-1"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+        </Button>
+      </div>
+    </div>
+  )
+}

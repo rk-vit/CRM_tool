@@ -37,18 +37,22 @@ export async function POST(
 
     const caller = callerResult[0];
 
-    // 2. Generate a lead ID
+    // 2. Fetch ALL users (admin + sales) for multi-assignment
+    const allUsers = await sql`SELECT id FROM users`;
+    const allUserIds = allUsers.map((u: any) => u.id);
+
+    // 3. Generate a lead ID
     const leadId = `LD${Date.now().toString().slice(-6)}`;
 
-    // 3. Create the lead
+    // 4. Create the lead — assigned to ALL users
     await sql`
       INSERT INTO leads (
         id, name, email, phone, project, status, sub_status, source, medium,
-        assigned_to, notes
+        assigned_to, assigned_users, notes
       ) VALUES (
         ${leadId}, ${name}, ${email}, ${caller.phone}, ${project},
         'new', 'warm', ${source || 'direct'}, ${medium || 'Phone Call'},
-        ${session.user.id}, ${notes || null}
+        ${session.user.id}, ${allUserIds}, ${notes || null}
       )
     `;
 
