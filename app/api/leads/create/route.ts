@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { assign } from "nodemailer/lib/shared";
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +12,9 @@ export async function POST(req: Request) {
     `);
 
     let nextId;
+    let assignedUsers = await sql.query(`SELECT id FROM users`);
+    assignedUsers = assignedUsers.map((u: any) => u.id);
+    console.log("Assigned Users:", assignedUsers);
     if (lastLeads.length > 0) {
       const lastNum = parseInt(lastLeads[0].id.replace("AX", ""), 10);
       const nextNum = lastNum + 1;
@@ -19,9 +23,9 @@ export async function POST(req: Request) {
       nextId = "AX0001";
     }
     await sql.query(`
-      INSERT INTO leads (id, name, email, phone, project, status, source, medium, assigned_to, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, 'new', $6, 'Manual', 'user-1', NOW(), NOW())
-    `, [nextId, name, email, phone, project, source]);
+      INSERT INTO leads (id, name, email, phone, project, status, source, medium, assigned_users, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, 'new', $6, 'Manual', $7, NOW(), NOW())
+    `, [nextId, name, email, phone, project, source, assignedUsers]);
 
     await sql.query(`
       INSERT INTO timeline_events (lead_id, type, title, description, created_by, created_at)

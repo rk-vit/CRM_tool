@@ -19,14 +19,11 @@ import {
   Clock,
   ArrowRight,
   Loader2,
-  PieChart,
   BarChart3,
-  Phone
 } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
-import type { Lead, TimelineEvent, DashboardStats, SalesExecutive } from "@/lib/types"
-
+import type { Lead, TimelineEvent, SalesExecutive } from "@/lib/types"
 
 export default function AdminDashboard() {
   const { user } = useAuth()
@@ -38,25 +35,18 @@ export default function AdminDashboard() {
       el.scrollIntoView({ behavior: "smooth" });
     }
   };
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayString = new Date().toISOString().split("T")[0];
+
   const [stats, setStats] = useState<any>(null)
   const [leads, setLeads] = useState<Lead[]>([])
   const [allLeads, setAllLeads] = useState<Lead[]>([])
   const [executives, setExecutives] = useState<SalesExecutive[]>([])
   const [recentTimeline, setRecentTimeline] = useState<TimelineEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayString = new Date().toISOString().split("T")[0];
-  const scrollToSection = (id: string) => {
-  const el = document.getElementById(id);
-  if (el) {
-    el.scrollIntoView({ behavior: "smooth" });
-  }
-};
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -86,7 +76,6 @@ export default function AdminDashboard() {
         setLoading(false)
       }
     }
-
     fetchData()
   }, [])
 
@@ -114,114 +103,162 @@ export default function AdminDashboard() {
     <div className="flex flex-col min-h-screen overflow-x-hidden w-full max-w-full">
       <Header title="Admin Overview" subtitle={`Welcome back, ${user?.name?.split(" ")[0]}`} />
 
-      <div className="flex-1 p-3 md:p-6 space-y-5 md:space-y-6 max-w-full overflow-x-hidden min-w-0">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 w-full">
-          <StatsCard
-            title="New Leads"
-            value={stats?.newLeads || 0}
-            icon={UserPlus}
-            variant="primary"
-            onClick={() => router.push("/admin/leads?status=new")}
-          />
-          <StatsCard
-            title="Today Follow-up"
-            value={stats?.todayFollowUp || 0}
-            icon={Calendar}
-            variant="warning"
-            onClick={() => scrollToSection("today-follow")}
-            onClick={() => scrollToSection("today-follow")}
-          />
-          <StatsCard
-            title="Missed Follow-up"
-            value={stats?.missedFollowUp || 0}
-            icon={AlertCircle}
-            variant="destructive"
-            onClick={() => scrollToSection("missed-follow")}
-          />
-          <StatsCard
-            title="Booked"
-            value={stats?.booked || 0}
-            icon={CheckCircle2}
-            variant="success"
-          />
+      <div className="flex-1 p-3 md:p-6 space-y-6 max-w-full overflow-x-hidden min-w-0">
+        
+        {/* STATS SECTION */}
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 w-full">
+            <StatsCard
+                title="New Leads"
+                value={stats?.newLeads || 0}
+                icon={UserPlus}
+                variant="primary"
+                onClick={() => router.push("/admin/leads?status=new")}
+            />
+            <StatsCard
+                title="Today Follow-up"
+                value={stats?.todayFollowUp || 0}
+                icon={Calendar}
+                variant="warning"
+                onClick={() => scrollToSection("today-follow")}
+            />
+            <StatsCard
+                title="Missed Follow-up"
+                value={stats?.missedFollowUp || 0}
+                icon={AlertCircle}
+                variant="destructive"
+                onClick={() => scrollToSection("missed-follow")}
+            />
+            <StatsCard
+                title="Booked"
+                value={stats?.booked || 0}
+                icon={CheckCircle2}
+                variant="success"
+            />
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 w-full">
+            <StatsCard title="Re-Engaged" value={stats?.reEngaged || 0} icon={TrendingUp} />
+            <StatsCard title="Today Leads" value={stats?.todayLeads || 0} icon={Users} />
+            <StatsCard title="Site Visits" value={stats?.siteVisitCompleted || 0} icon={Building} />
+            <StatsCard title="Active Executives" value={stats?.totalSales || 0} icon={Users} variant="warning" />
+            </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 w-full">
-          <StatsCard
-            title="Re-Engaged"
-            value={stats?.reEngaged || 0}
-            icon={TrendingUp}
-          />
-          <StatsCard
-            title="Today Leads"
-            value={stats?.todayLeads || 0}
-            icon={Users}
-          />
-          <StatsCard
-            title="Site Visits"
-            value={stats?.siteVisitCompleted || 0}
-            icon={Building}
-          />
-          <StatsCard
-            title="Active Executives"
-            value={stats?.totalSales || 0}
-            icon={Users}
-            variant="warning"
-          />
+        {/* FOLLOW UPS MOVED UP & IMPROVED FOR MOBILE */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Today's Follow-ups */}
+            <Card id="today-follow" className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-amber-500" /> Today&apos;s Follow-ups
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {allLeads.filter(l => l.followUpDate?.startsWith(todayString)).slice(0, 6).map((lead) => (
+                    <Link
+                        href={`/admin/leads/${lead.id}`}
+                        key={lead.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors min-w-0"
+                    >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs">
+                        {lead.name.split(" ").map((n: string) => n[0]).join("")}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{lead.name}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{lead.project}</p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] shrink-0 max-w-[80px] truncate">
+                        {lead.assignedUserNames?.[0] || lead.assignedToName || "Unassigned"}
+                    </Badge>
+                    </Link>
+                ))}
+                {allLeads.filter(l => l.followUpDate?.startsWith(todayString)).length === 0 && (
+                    <p className="col-span-full text-center py-8 text-sm text-muted-foreground">No follow-ups for today.</p>
+                )}
+                </div>
+            </CardContent>
+            </Card>
+
+            {/* Missed Follow Ups */}
+            <Card id="missed-follow" className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-destructive" /> Missed Follow Ups
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {allLeads
+                    .filter(l => {
+                    if (!l.followUpDate) return false;
+                    const followUp = new Date(l.followUpDate);
+                    return followUp < today;
+                    })
+                    .slice(0, 6)
+                    .map((lead) => (
+                    <Link
+                        href={`/admin/leads/${lead.id}`}
+                        key={lead.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors min-w-0"
+                    >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive font-semibold text-xs">
+                        {lead.name.split(" ").map((n: string) => n[0]).join("")}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{lead.name}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{lead.project}</p>
+                        </div>
+                        <Badge variant="destructive" className="text-[10px] shrink-0 opacity-80">
+                        Missed
+                        </Badge>
+                    </Link>
+                    ))}
+                {allLeads.filter(l => {
+                    if (!l.followUpDate) return false;
+                    const followUp = new Date(l.followUpDate);
+                    return followUp < today;
+                }).length === 0 && (
+                    <p className="col-span-full text-center py-8 text-sm text-muted-foreground">No missed follow-ups.</p>
+                )}
+                </div>
+            </CardContent>
+            </Card>
         </div>
 
-        <div className="flex flex-col gap-6 w-full min-w-0 [&>*]:min-w-0">
-          <Card className="col-span-1 md:col-span-2 border-0 shadow-sm">
+        {/* RECENT LEADS & PERFORMANCE */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full min-w-0">
+          <Card className="lg:col-span-2 border-0 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg font-semibold">Latest Leads Across Team</CardTitle>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/admin/leads" className="text-primary">
-                  Manage Leads <ArrowRight className="ml-1 h-4 w-4" />
+              <Button variant="ghost" size="sm" asChild className="h-8 px-2">
+                <Link href="/admin/leads" className="text-primary text-xs">
+                  All <ArrowRight className="ml-1 h-3 w-3" />
                 </Link>
               </Button>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="overflow-x-auto rounded-lg w-full max-w-full">
-                <table className="min-w-0 w-full text-xs md:text-sm table-fixed">
-                  <colgroup>
-                    <col className="w-[22%]" />
-                    <col className="w-[25%]" />
-                    <col className="w-[20%]" />
-                    <col className="w-[15%]" />
-                    <col className="hidden md:table-column w-[18%]" />
-                  </colgroup>
+            <CardContent className="px-2 md:px-6">
+              <div className="overflow-x-auto rounded-lg w-full">
+                <table className="w-full text-xs md:text-sm table-fixed">
                   <thead>
-                    <tr className="text-muted-foreground border-b text-xs">
-                      <th className="text-left py-2 font-medium pr-3">Lead Name</th>
-                      <th className="text-left py-2 font-medium pr-3">Project</th>
-                      <th className="text-left py-2 font-medium pr-3">Assigned</th>
-                      <th className="text-left py-2 font-medium pr-3">Source</th>
-                      <th className="hidden md:table-cell text-right py-2 font-medium">Status</th>
+                    <tr className="text-muted-foreground border-b text-[10px] md:text-xs">
+                      <th className="text-left py-2 font-medium w-[30%]">Lead</th>
+                      <th className="text-left py-2 font-medium w-[40%]">Project</th>
+                      <th className="text-right py-2 font-medium w-[30%]">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {leads.map((lead) => (
                       <tr
                         key={lead.id}
-                        className="cursor-pointer border-b last:border-0 hover:bg-secondary/30 active:bg-secondary/50 transition-colors"
+                        className="cursor-pointer border-b last:border-0 hover:bg-secondary/30 transition-colors"
                         onClick={() => router.push(`admin/leads/${lead.id}`)}
                       >
-                        <td className="py-2 md:py-3 pr-3 truncate overflow-hidden max-w-0">
-                          {lead.name}
-                        </td> 
-                        <td className="py-2 md:py-3 pr-3 truncate overflow-hidden max-w-0 text-muted-foreground">
-                          {lead.project}
-                        </td>
-                        <td className="py-2 md:py-3 pr-3 overflow-hidden max-w-0">
-                          <Badge className="font-normal text-[10px] md:text-xs px-1.5 py-0.5 truncate max-w-full block">
-                            {lead.assignedUserNames?.join(", ") || lead.assignedToName || "Unassigned"}
-                          </Badge>
-                        </td>
-                        <td className="py-2 md:py-3 pr-3 text-muted-foreground truncate overflow-hidden max-w-0">
-                          {lead.source || "—"}
-                        </td>
-                        <td className="hidden md:table-cell py-2 md:py-3 text-right">
-                          <Badge className={`${getStatusColor(lead.status)} text-[10px] md:text-xs px-1.5 md:px-2 py-0.5`}>
+                        <td className="py-3 truncate font-medium">{lead.name}</td> 
+                        <td className="py-3 truncate text-muted-foreground">{lead.project}</td>
+                        <td className="py-3 text-right">
+                          <Badge className={`${getStatusColor(lead.status)} text-[10px] px-1.5 py-0`}>
                             {lead.status}
                           </Badge>
                         </td>
@@ -229,201 +266,69 @@ export default function AdminDashboard() {
                     ))}
                   </tbody>
                 </table>
-                {leads.length === 0 && (
-                  <p className="text-center py-4 text-muted-foreground">No leads found.</p>
-                )}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="col-span-1 border-0 shadow-sm">
+          <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-semibold flex items-center gap-2 truncate">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 shrink-0" /> Team Performance
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 md:space-y-4">
+            <CardContent className="space-y-4">
               {executives.map((exec) => (
-                <div key={exec.id} className="space-y-2 min-w-0">
-                  <div className="flex items-center justify-between text-sm gap-2 min-w-0">
-                    <span className="font-medium truncate min-w-0">{exec.name}</span>
-                    <span className="text-muted-foreground shrink-0">
+                <div key={exec.id} className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium truncate">{exec.name}</span>
+                    <span className="text-muted-foreground">
                       {exec.leadsConverted} / {exec.leadsAssigned}
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary"
-                      style={{ width: `${exec.conversionRate}%` }}
-                    />
+                  <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-primary" style={{ width: `${exec.conversionRate}%` }} />
                   </div>
                 </div>
               ))}
-              <Button variant="outline" className="w-full mt-4" asChild>
-                <Link href="/admin/team">View Team Analytics</Link>
+              <Button variant="outline" size="sm" className="w-full text-xs" asChild>
+                <Link href="/admin/team">Full Analytics</Link>
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full min-w-0 [&>*]:min-w-0">
-          <Card className="border-0 shadow-sm">
+        {/* SYSTEM ACTIVITY */}
+        <Card className="border-0 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg font-semibold">System Activity</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                <CardTitle className="text-lg font-semibold">System Activity</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+                <div className="space-y-4">
                 {recentTimeline.map((event, index) => (
-                  <div key={event.id} className="flex gap-2 md:gap-3">
+                    <div key={event.id} className="flex gap-3">
                     <div className="relative flex flex-col items-center shrink-0">
-                      <div
-                        className={`h-2 w-2 rounded-full ${event.type === "call"
-                            ? "bg-green-500"
-                            : event.type === "email"
-                              ? "bg-blue-500"
-                              : event.type === "status_change"
-                                ? "bg-orange-500"
-                                : "bg-muted-foreground"
-                          }`}
-                      />
-                      {index < recentTimeline.length - 1 && (
-                        <div className="flex-1 w-px bg-border mt-1" />
-                      )}
+                        <div className={`h-2 w-2 rounded-full ${
+                            event.type === "call" ? "bg-green-500" : 
+                            event.type === "email" ? "bg-blue-500" : 
+                            event.type === "status_change" ? "bg-orange-500" : "bg-muted-foreground"
+                        }`} />
+                        {index < recentTimeline.length - 1 && <div className="flex-1 w-px bg-border mt-1" />}
                     </div>
                     <div className="flex-1 pb-4 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs md:text-sm font-medium truncate min-w-0">
-                          {event.title}
+                        <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs md:text-sm font-medium truncate">{event.title}</p>
+                        <Badge variant="secondary" className="text-[9px] px-1 h-4">ID: {event.leadId}</Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-1">{event.description}</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-1">
+                        {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
                         </p>
-                        <Badge className="text-[10px] px-1.5 shrink-0">
-                          {event.leadId}
-                        </Badge>
-                      </div>
-                      <p className="text-[11px] md:text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                        {event.description}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/60 mt-1">
-                        {formatDistanceToNow(new Date(event.createdAt), {
-                          addSuffix: true,
-                        })}
-                      </p>
                     </div>
-                  </div>
+                    </div>
                 ))}
-              </div>
+                </div>
             </CardContent>
-          </Card>
-          <Card id="today-follow" className="border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold">Today&apos;s Follow-ups</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {leads.filter(l => l.followUpDate?.startsWith(todayString)).slice(0, 6).map((lead) => (
-                <Link
-                  href={`/leads/${lead.id}`}
-                  key={lead.id}
-                  className="flex items-center gap-3 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                    {lead.name.split(" ").map(n => n[0]).join("")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{lead.name}</p>
-                    Don't show phone number as of now
-                    <p className="text-xs text-muted-foreground">{lead.phone}</p>
-                   
-                  </div>
-                  <Button size="sm" variant="outline" asChild>
-                    <Link href={`tel:${lead.phone}`}>
-                      <Phone className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                 
-                </Link>
-              ))}
-              {leads.filter(l => l.followUpDate?.startsWith(todayString)).length === 0 && (
-                <p className="col-span-full text-center py-4 text-sm text-muted-foreground">No follow-ups scheduled for today.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        </div>
-
-        {/* Today's Follow-ups */}
-        <Card id="today-follow" className="border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold">Today&apos;s Follow-ups</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {allLeads.filter(l => l.followUpDate?.startsWith(todayString)).slice(0, 6).map((lead) => (
-                <Link
-                  href={`/admin/leads/${lead.id}`}
-                  key={lead.id}
-                  className="flex items-center gap-3 p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                    {lead.name.split(" ").map((n: string) => n[0]).join("")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{lead.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{lead.project}</p>
-                  </div>
-                  <Badge className="text-[10px] shrink-0">
-                    {lead.assignedUserNames?.join(", ") || lead.assignedToName || "Unassigned"}
-                  </Badge>
-                </Link>
-              ))}
-              {allLeads.filter(l => l.followUpDate?.startsWith(todayString)).length === 0 && (
-                <p className="col-span-full text-center py-4 text-sm text-muted-foreground">No follow-ups scheduled for today.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Missed Follow Ups */}
-        <Card id="missed-follow" className="border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-semibold">Missed Follow Ups</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {allLeads
-                .filter(l => {
-                  if (!l.followUpDate) return false;
-                  const followUp = new Date(l.followUpDate);
-                  return followUp < today;
-                })
-                .slice(0, 6)
-                .map((lead) => (
-                  <Link
-                    href={`/admin/leads/${lead.id}`}
-                    key={lead.id}
-                    className="flex items-center gap-3 p-3 sm:p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                      {lead.name.split(" ").map((n: string) => n[0]).join("")}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{lead.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{lead.project}</p>
-                    </div>
-                    <Badge className="text-[10px] shrink-0">
-                      {lead.assignedUserNames?.join(", ") || lead.assignedToName || "Unassigned"}
-                    </Badge>
-                  </Link>
-                ))}
-              {allLeads.filter(l => {
-                if (!l.followUpDate) return false;
-                const followUp = new Date(l.followUpDate);
-                return followUp < today;
-              }).length === 0 && (
-                <p className="col-span-full text-center py-4 text-sm text-muted-foreground">No missed follow-ups.</p>
-              )}
-            </div>
-          </CardContent>
         </Card>
       </div>
     </div>

@@ -74,10 +74,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       id, name, email, phone, alternatePhone, project, status,
-      subStatus, source, medium, assignedTo, assignedUsers, followUpDate,
+      subStatus, source, medium, assignedTo, followUpDate,
       budget, requirements, notes
     } = body;
 
+    const assignedUsers = await sql`SELECT id FROM users`;
     const result = await sql`
       INSERT INTO leads (
         id, name, email, phone, alternate_phone, project, status, 

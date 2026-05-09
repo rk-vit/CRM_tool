@@ -32,7 +32,7 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
   const [formName, setFormName] = useState("")
   const [formEmail, setFormEmail] = useState("")
   const [formProject, setFormProject] = useState("")
-  const [formSource, setFormSource] = useState<LeadSource>("direct")
+  const [formSource, setFormSource] = useState<LeadSource>("Direct_Call")
   const [formNotes, setFormNotes] = useState("")
 
   const fetchCallers = async () => {
@@ -61,7 +61,7 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
     setFormName("")
     setFormEmail("")
     setFormProject("")
-    setFormSource("direct")
+    setFormSource("Direct_Call")
     setFormNotes("")
     setConvertDialogOpen(true)
   }
@@ -298,7 +298,7 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
                   onChange={(e) => setFormProject(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <label className="text-sm font-medium">Source</label>
                 <Select value={formSource} onValueChange={(v) => setFormSource(v as LeadSource)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -312,7 +312,7 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
                     <SelectItem value="magicbricks">MagicBricks</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </div> */}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Notes</label>

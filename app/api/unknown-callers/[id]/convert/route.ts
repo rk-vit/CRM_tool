@@ -41,8 +41,15 @@ export async function POST(
     const allUsers = await sql`SELECT id FROM users`;
     const allUserIds = allUsers.map((u: any) => u.id);
 
-    // 3. Generate a lead ID
-    const leadId = `LD${Date.now().toString().slice(-6)}`;
+    const max_leadid = await sql`SELECT id FROM leads WHERE id LIKE 'AX%' ORDER BY id DESC LIMIT 1`;
+    let leadId;
+    if (max_leadid.length > 0) {
+      const lastNum = parseInt(max_leadid[0].id.replace("AX", ""), 10);
+      const nextNum = lastNum + 1;
+      leadId = `AX${nextNum.toString().padStart(4, "0")}`;
+    } else {
+      leadId = "AX0200";
+    }
 
     // 4. Create the lead — assigned to ALL users
     await sql`
