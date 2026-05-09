@@ -296,9 +296,7 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
                       <Mail className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Email</span>
                     </a>
                   </Button>
-                  <Button variant="secondary" className="w-full min-w-0 bg-white/10 hover:bg-white/20 border-0 text-white">
-                    <Calendar className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Schedule</span>
-                  </Button>
+
                   <Button 
                     variant="secondary" 
                     className="w-full min-w-0 bg-white/10 hover:bg-white/20 border-0 text-white"
