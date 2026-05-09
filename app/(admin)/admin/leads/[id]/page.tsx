@@ -13,6 +13,8 @@ import { Browser } from '@capacitor/browser';
 
 import {
   Phone,
+  PhoneCall,
+  PhoneOff,
   Mail,
   Calendar,
   Clock,
@@ -28,7 +30,9 @@ import {
   Plus,
   Building,
   Edit,
-  Zap
+  Zap,
+  Minimize2,
+  Maximize2
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -75,6 +79,114 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
   const [error, setError] = useState<string | null>(null)
   const [userNames, setUserNames] = useState<Record<string, string>>({})
   const [quickActionOpen, setQuickActionOpen] = useState(false)
+
+  // Call State
+  const [callConfirmOpen, setCallConfirmOpen] = useState(false)
+  const [isCalling, setIsCalling] = useState(false)
+  const [callDuration, setCallDuration] = useState(0)
+  const [callLoading, setCallLoading] = useState(false)
+  const [callError, setCallError] = useState<string | null>(null)
+  const [callMinimized, setCallMinimized] = useState(false)
+  const [callSid, setCallSid] = useState<string | null>(null)
+  const [callResult, setCallResult] = useState<string | null>(null)
+
+  // Timer for the calling screen
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (isCalling) {
+      interval = setInterval(() => {
+        setCallDuration((prev) => prev + 1)
+      }, 1000)
+    } else {
+      setCallDuration(0)
+    }
+    return () => clearInterval(interval)
+  }, [isCalling])
+
+  // Poll Exotel callback for call status
+  useEffect(() => {
+    if (!isCalling || !callSid) return
+
+    const startTime = Date.now()
+    const TIMEOUT_MS = 90_000
+
+    const pollInterval = setInterval(async () => {
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        clearInterval(pollInterval)
+        setIsCalling(false)
+        setCallSid(null)
+        setCallResult("Call timed out — no response from server")
+        setTimeout(() => setCallResult(null), 5000)
+        fetchLeadDetails()
+        return
+      }
+
+      try {
+        const res = await fetch(`/api/calls/status?callSid=${callSid}`)
+        if (!res.ok) return
+        const data = await res.json()
+
+        if (data.ended) {
+          clearInterval(pollInterval)
+          setIsCalling(false)
+          setCallSid(null)
+          setCallResult(
+            data.status === "answered"
+              ? `Call completed — ${Math.floor(data.duration / 60)}m ${data.duration % 60}s`
+              : data.status === "busy"
+              ? "Lead was busy"
+              : "Call was not answered"
+          )
+          setTimeout(() => setCallResult(null), 5000)
+          fetchLeadDetails()
+        }
+      } catch (err) {
+        console.error("Poll error:", err)
+      }
+    }, 5000)
+
+    return () => clearInterval(pollInterval)
+  }, [isCalling, callSid])
+
+  const handleCallClick = () => {
+    setCallError(null)
+    setCallConfirmOpen(true)
+  }
+
+  const handleConfirmCall = async () => {
+    setCallLoading(true)
+    setCallError(null)
+    try {
+      const res = await fetch("/api/calls/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId: lead.id }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || "Failed to initiate call")
+      setCallSid(result.callSid || null)
+      setCallConfirmOpen(false)
+      setIsCalling(true)
+    } catch (err: any) {
+      setCallError(err.message || "Something went wrong. Please try again.")
+    } finally {
+      setCallLoading(false)
+    }
+  }
+
+  const handleEndCall = () => {
+    setIsCalling(false)
+    setCallSid(null)
+    setCallResult("Call ended by agent")
+    setTimeout(() => setCallResult(null), 5000)
+    fetchLeadDetails()
+  }
+
+  const formatCallDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, "0")
+    const secs = (seconds % 60).toString().padStart(2, "0")
+    return `${mins}:${secs}`
+  }
 
   // Edit State
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -296,10 +408,8 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
             <Card className="border-0 shadow-sm bg-primary text-primary-foreground overflow-hidden">
               <CardContent className="p-4">
                 <div className="grid grid-cols-2 gap-2">
-                  <Button variant="secondary" className="w-full min-w-0" asChild>
-                    <a href={`tel:${lead.phone}`}>
-                      <Phone className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Call</span>
-                    </a>
+                  <Button variant="secondary" className="w-full min-w-0" onClick={handleCallClick}>
+                    <Phone className="h-4 w-4 mr-2 shrink-0" /> <span className="truncate">Call</span>
                   </Button>
                   {/* <Button variant="secondary" className="w-full min-w-0" asChild>
                     <a href={`mailto:${lead.email}`}>
@@ -588,6 +698,108 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Call Confirmation Dialog */}
+      <Dialog open={callConfirmOpen} onOpenChange={setCallConfirmOpen}>
+        <DialogContent className="sm:max-w-md mx-4 sm:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Phone className="h-5 w-5 text-green-600" />
+              </div>
+              Confirm Call
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to call{" "}
+              <span className="font-semibold text-foreground">{lead.name}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          {callError && (
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3">
+              <p className="text-sm text-red-600 dark:text-red-400">{callError}</p>
+            </div>
+          )}
+          <DialogFooter className="pt-4 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCallConfirmOpen(false)} disabled={callLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmCall} className="bg-green-600 hover:bg-green-700 text-white" disabled={callLoading}>
+              {callLoading ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting...</>
+              ) : (
+                <><PhoneCall className="h-4 w-4 mr-2" /> Yes, Call Now</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Calling Widget */}
+      {isCalling &&
+        (callMinimized ? (
+          <button
+            onClick={() => setCallMinimized(false)}
+            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex items-center gap-3 px-4 py-3 rounded-full bg-slate-900 border border-slate-700 shadow-2xl shadow-black/40 hover:shadow-black/60 transition-all duration-300 hover:scale-105 group cursor-pointer"
+          >
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-green-500/30 animate-ping" style={{ animationDuration: "2s" }} />
+              <div className="relative h-8 w-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
+                <Phone className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm font-medium">{lead.name.split(" ")[0]}</span>
+              <span className="text-green-400 font-mono text-sm">{formatCallDuration(callDuration)}</span>
+            </div>
+            <Maximize2 className="h-4 w-4 text-slate-400 group-hover:text-white transition-colors" />
+          </button>
+        ) : (
+          <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] w-[calc(100vw-2rem)] max-w-[320px] rounded-2xl overflow-hidden shadow-2xl shadow-black/50 border border-slate-700/50" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)' }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700/50">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-green-400 text-xs font-semibold tracking-widest uppercase">On Call</span>
+              </div>
+              <button onClick={() => setCallMinimized(true)} className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all">
+                <Minimize2 className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-6 py-5 flex flex-col items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping" style={{ animationDuration: "2s" }} />
+                <div className="absolute -inset-2 rounded-full border border-green-500/15 animate-pulse" style={{ animationDuration: "2s" }} />
+                <div className="relative h-16 w-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/20">
+                  <span className="text-xl font-bold text-white">
+                    {lead.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                  </span>
+                </div>
+              </div>
+              <div className="text-center space-y-0.5">
+                <p className="text-white font-semibold text-base">{lead.name}</p>
+              </div>
+              <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10">
+                <p className="text-white font-mono text-sm tracking-widest">{formatCallDuration(callDuration)}</p>
+              </div>
+            </div>
+            <div className="px-6 pb-5 flex justify-center">
+              <button onClick={handleEndCall} className="group flex items-center gap-2 px-6 py-2.5 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-200 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-105 active:scale-95">
+                <PhoneOff className="h-4 w-4 text-white transition-transform group-hover:rotate-[135deg] duration-300" />
+                <span className="text-white text-sm font-medium">End Call</span>
+              </button>
+            </div>
+          </div>
+        ))
+      }
+
+      {/* Call Result Toast */}
+      {callResult && (
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300 max-w-[calc(100vw-2rem)]">
+          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl shadow-black/40">
+            <div className={`h-3 w-3 shrink-0 rounded-full ${callResult?.startsWith("Call completed") ? "bg-green-400" : "bg-amber-400"}`} />
+            <span className="text-white text-sm font-medium">{callResult}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
