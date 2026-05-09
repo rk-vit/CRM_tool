@@ -170,9 +170,7 @@ export default function AdminLeadsPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header title="All Leads" subtitle={`${filteredLeads.length} leads `} />
-
-      <div className="flex-1 p-4 md:p-6 space-y-6">
-        {/* Leads Stats */}
+    {/*<div className="flex-1 p-4 md:p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6 flex items-center gap-4">
@@ -220,11 +218,11 @@ export default function AdminLeadsPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
 
         {/* Actions Row */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="flex gap-2">
+          <div className="flex gap-2 ml-2 mt-2 sm:mt-0">
             <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -410,7 +408,6 @@ export default function AdminLeadsPage() {
           </div>
         )}
       </div>
-    </div>
   )
 }
 

@@ -59,7 +59,7 @@ export default function RootLayout({
           <SessionProvider>
             <AuthProvider>{children}</AuthProvider>
           </SessionProvider>
-          <Toaster />  
+          <Toaster />
           <Analytics />
         </ThemeProvider>
       </body>

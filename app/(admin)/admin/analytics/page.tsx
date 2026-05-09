@@ -165,9 +165,9 @@ export default function AnalyticsPage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
+            <div>
               {/* Weekly Trends */}
-              <Card className="border-0 shadow-sm">
+              {/* <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg">Weekly Trends (Simulated)</CardTitle>
                 </CardHeader>
@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
-              </Card>
+              </Card> */}
 
               {/* Lead Status Distribution */}
               <Card className="border-0 shadow-sm">
