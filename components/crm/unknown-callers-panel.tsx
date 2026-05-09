@@ -88,7 +88,7 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
             name: formName,
             email: formEmail,
             project: formProject,
-            source: formSource,
+            source: "Direct_Call",
             medium: "Phone Call",
             notes: formNotes,
           }),
@@ -298,7 +298,7 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
                   onChange={(e) => setFormProject(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <label className="text-sm font-medium">Source</label>
                 <Select value={formSource} onValueChange={(v) => setFormSource(v as LeadSource)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -313,7 +313,7 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            </div> */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Notes</label>
               <Textarea
