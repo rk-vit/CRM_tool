@@ -201,11 +201,11 @@ export function UnknownCallersPanel({ open, onOpenChange, onCountChange }: Unkno
                           </p>
                         </div>
                       </div>
-                      <Badge className={`text-[10px] ${statusColor(caller.callStatus)}`}>
+                      {/* <Badge className={`text-[10px] ${statusColor(caller.callStatus)}`}>
                         {caller.callStatus === "answered" ? "Answered" 
                           : caller.callStatus === "busy" ? "Busy" 
                           : "No Answer"}
-                      </Badge>
+                      </Badge> */}
                     </div>
 
                     {/* Duration + recording */}
