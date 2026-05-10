@@ -28,7 +28,8 @@ import {
   Edit,
   Zap,
   Minimize2,
-  Maximize2
+  Maximize2,
+  Bell
 } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
@@ -327,7 +328,6 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50/50">
-      {/* HEADER SECTION - Optimised for Mobile View */}
       <div className="sticky top-0 z-30 w-full border-b bg-white/80 backdrop-blur-md">
         <div className="px-4 py-4 md:px-6">
           <div className="flex items-center justify-between mb-2">
@@ -379,7 +379,6 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
       <div className="flex-1 p-4 md:p-6 pb-32 md:pb-6">
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
-            {/* ACTION CARD - Layout matching image_766779.png */}
             <Card className="border-0 shadow-md overflow-hidden rounded-2xl bg-primary ring-1 ring-white/10">
               <CardContent className="p-3 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
@@ -420,7 +419,39 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
               </CardContent>
             </Card>
 
-            {/* INFO CARDS */}
+            <Card className="border-0 shadow-sm rounded-2xl">
+              <CardHeader className="pb-2 border-b border-slate-50 px-4">
+                <CardTitle className="text-xs font-bold flex items-center gap-2">
+                  <Bell className="h-3.5 w-3.5 text-primary"/> Follow-up Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-3 px-4">
+                {lead.followUpDate ? (
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-primary/5 border border-primary/10">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                      <Calendar className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Scheduled For</p>
+                      <p className="text-xs font-bold text-slate-700">
+                        {format(new Date(lead.followUpDate), "MMM dd, yyyy • hh:mm a")}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                      <Calendar className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Next Task</p>
+                      <p className="text-xs font-bold text-slate-400">No follow-ups scheduled</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="border-0 shadow-sm rounded-2xl">
               <CardHeader className="pb-2 border-b border-slate-50 px-4">
                 <CardTitle className="text-xs font-bold flex items-center gap-2">
@@ -669,7 +700,6 @@ export default function AdminLeadDetailsPage({ params }: { params: Promise<{ id:
         </DialogContent>
       </Dialog>
 
-      {/* CALL UI */}
       {isCalling && (
         <div className={`fixed z-[100] transition-all duration-500 ease-in-out ${
           callMinimized 

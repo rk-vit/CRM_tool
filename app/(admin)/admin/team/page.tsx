@@ -128,9 +128,9 @@ export default function TeamPage() {
               className="pl-9"
             />
           </div>
-          <Button>
+          {/* <Button>
             <Plus className="h-4 w-4 mr-2" /> Add Executive
-          </Button>
+          </Button> */}
         </div>
 
         {/* Team Table */}
