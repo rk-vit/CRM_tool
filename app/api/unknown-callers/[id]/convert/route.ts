@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import axios from "axios";
 
 export async function POST(
   request: Request,
@@ -50,6 +51,68 @@ export async function POST(
     } else {
       leadId = "AX0200";
     }
+    const rectifiedMobile = caller.phone.startsWith("+91")? caller.phone: `+91${caller.phone}`;
+        
+    const whatsapp_url =`https://${process.env.WHATSAPP_API_KEY}:${process.env.WHATSAPP_API_TOKEN}@api.exotel.com/v2/accounts/${process.env.WHATSAPP_SID}/messages`;
+    const whatsappPayload = {
+          "custom_data": "TEST_MSG",
+          "status_callback": "https://276144074cd209fa381a1c133da75f9e.m.pipedream.net",
+          "whatsapp": {
+            "messages": [
+              {
+                "from": "+918047361856",
+                "to": rectifiedMobile,
+                "content": {
+                  "type": "template",
+                  "template": {
+                    "name": "lead_acknoweledgement_template",
+                    "language": {
+                      "policy": "deterministic",
+                      "code": "en_US"
+                    },
+                    "components": [
+                      {
+                        "type": "header",
+                        "parameters": [
+                          {
+                            "type": "image",
+                            "image": {
+                              "link": "https://drive.google.com/uc?export=download&id=1sTrrxmUCmj3gyuI6LeCEgmCajB_xUMY3"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "body",
+                        "parameters": [
+                          { "type": "text", "text": name },
+                          { "type": "text", "text": "https://www.instagram.com/reel/DVTTOImAHI9/" },
+                          { "type": "text", "text": "https://photos.app.goo.gl/3sJssYN7bRqu3QGWA" },
+                          { "type": "text", "text": "https://drive.google.com/file/d/16uBylpcp7ds1NEw7bsfBGPK1mdbaVEz-/" },
+                          { "type": "text", "text": "https://maps.app.goo.gl/6a45hJYnG9HCWYbb9" }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        };
+        
+      axios.post(
+        whatsapp_url,
+        whatsappPayload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      .then((res) => {
+        console.log("FULL DATA:", JSON.stringify(res.data, null, 2));
+        console.log("MESSAGES:", JSON.stringify(res.data.response.whatsapp.messages, null, 2));
+      });
 
     // 4. Create the lead — assigned to ALL users
     await sql`
