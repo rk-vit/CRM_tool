@@ -2,22 +2,27 @@ import { sql } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import axios from "axios";
+import { createApiLogger } from "@/lib/logger/api-logger";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  const log = createApiLogger(request, `/api/unknown-callers/${id}/convert`);
+  log.start();
   try {
     const session = await auth();
     if (!session?.user?.id) {
+      log.warn(401, { reason: "missing_session", id });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
     const body = await request.json();
     const { name, email, project, source, medium, notes } = body;
 
     if (!name || !email || !project) {
+      log.warn(400, { reason: "missing_required_fields", id });
       return NextResponse.json(
         { error: "Name, email, and project are required." },
         { status: 400 }
@@ -30,6 +35,7 @@ export async function POST(
     `;
 
     if (callerResult.length === 0) {
+      log.warn(404, { reason: "unknown_caller_not_found", id });
       return NextResponse.json(
         { error: "Unknown caller not found or already reviewed." },
         { status: 404 }
@@ -100,7 +106,8 @@ export async function POST(
           }
         };
         
-      axios.post(
+    try {
+      await axios.post(
         whatsapp_url,
         whatsappPayload,
         {
@@ -108,11 +115,10 @@ export async function POST(
             "Content-Type": "application/json",
           },
         }
-      )
-      .then((res) => {
-        console.log("FULL DATA:", JSON.stringify(res.data, null, 2));
-        console.log("MESSAGES:", JSON.stringify(res.data.response.whatsapp.messages, null, 2));
-      });
+      );
+    } catch (whatsappError) {
+      log.warn(502, { reason: "whatsapp_delivery_failed", id, leadId });
+    }
 
     // 4. Create the lead — assigned to ALL users
     await sql`
@@ -159,13 +165,14 @@ export async function POST(
       WHERE id = ${id}
     `;
 
+    log.success(200, { id, leadId, whatsappDeliveryAttempted: true });
     return NextResponse.json({
       success: true,
       leadId,
       message: `Lead ${name} created successfully.`,
     });
   } catch (error) {
-    console.error("Error converting unknown caller:", error);
+    log.error(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

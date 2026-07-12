@@ -1,7 +1,10 @@
 import { sql } from "@/lib/db";
+import { createApiLogger } from "@/lib/logger/api-logger";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const log = createApiLogger(request, "/api/admin/stats");
+  log.start();
   try {
     const counts = await sql`
       SELECT 
@@ -21,7 +24,7 @@ export async function GET() {
 
     const stats = counts[0];
 
-    return NextResponse.json({
+    const response = {
       newLeads: Number(stats.new_leads) || 0,
       reEngaged: Number(stats.re_engaged) || 0,
       todayFollowUp: Number(stats.today_follow_up) || 0,
@@ -31,9 +34,11 @@ export async function GET() {
       booked: Number(stats.booked) || 0,
       allLeads: Number(stats.total_leads) || 0,
       totalSales: Number(userStats[0].total_sales) || 0
-    });
+    };
+    log.success(200, { totalLeads: response.allLeads, totalSales: response.totalSales });
+    return NextResponse.json(response);
   } catch (error) {
-    console.error("Database error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to fetch admin stats" }, { status: 500 });
   }
 }

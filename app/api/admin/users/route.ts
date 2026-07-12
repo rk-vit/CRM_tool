@@ -1,7 +1,10 @@
 import { sql } from "@/lib/db";
+import { createApiLogger } from "@/lib/logger/api-logger";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const log = createApiLogger(request, "/api/admin/users");
+  log.start();
   try {
     const users = await sql`
       SELECT 
@@ -26,9 +29,10 @@ export async function GET() {
         : 0
     }));
 
+    log.success(200, { count: mappedUsers.length });
     return NextResponse.json(mappedUsers);
   } catch (error) {
-    console.error("Database error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
   }
 }
