@@ -1,3 +1,4 @@
+import "pino-loki";
 import pino from "pino";
 
 const enableGrafanaLogs = process.env.ENABLE_GRAFANA_LOGS === "true";
