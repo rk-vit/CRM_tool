@@ -1,7 +1,10 @@
 import { sql } from "@/lib/db";
+import { createApiLogger } from "@/lib/logger/api-logger";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
+  const log = createApiLogger(request, "/api/calls");
+  log.start();
   const { searchParams } = new URL(request.url);
   const assignedTo = searchParams.get("assignedTo");
 
@@ -73,9 +76,10 @@ export async function GET(request: Request) {
       callerType: c.caller_type,
     }));
 
+    log.success(200, { count: mappedCalls.length, assignedTo: assignedTo ?? "all" });
     return NextResponse.json(mappedCalls);
   } catch (error) {
-    console.error("Database error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to fetch calls" }, { status: 500 });
   }
 }

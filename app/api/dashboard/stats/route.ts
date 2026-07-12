@@ -1,7 +1,10 @@
 import { sql } from "@/lib/db";
+import { createApiLogger } from "@/lib/logger/api-logger";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
+  const log = createApiLogger(request, "/api/dashboard/stats");
+  log.start();
   const { searchParams } = new URL(request.url);
   const assignedTo = searchParams.get("assignedTo");
 
@@ -28,7 +31,7 @@ export async function GET(request: Request) {
     `, params);
 
     const stats = counts[0];
-    return NextResponse.json({
+    const response = {
       newLeads: Number(stats.new_leads) || 0,
       reEngaged: Number(stats.reengaged),
       todayFollowUp: Number(stats.today_follow_up) || 0,
@@ -37,9 +40,11 @@ export async function GET(request: Request) {
       siteVisitCompleted: 0, // Placeholder
       booked: Number(stats.booked) || 0,
       allLeads: Number(stats.total) || 0
-    });
+    };
+    log.success(200, { totalLeads: response.allLeads, assignedTo: assignedTo ?? "all" });
+    return NextResponse.json(response);
   } catch (error) {
-    console.error("Database error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
   }
 }
