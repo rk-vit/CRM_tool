@@ -31,7 +31,6 @@ function normalizeError(error: unknown) {
 function emit(level: LogLevel, event: string, context: ApiLogContext) {
   const payload = {
     event,
-    level,
     timestamp: new Date().toISOString(),
     method: context.method,
     path: context.path,
