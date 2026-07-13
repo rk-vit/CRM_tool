@@ -28,7 +28,7 @@ export async function register() {
     !process.env.GRAFANA_LOKI_HOST ||
     !process.env.GRAFANA_LOKI_USERNAME ||
     !process.env.GRAFANA_LOKI_PASSWORD;
-
+  console.log('Using Local Logging:', useLocalLogging);
   const stream = useLocalLogging
     ? pino.transport({
         target: "pino-pretty",
