@@ -23,7 +23,7 @@ export async function register() {
   if(hasOtel) {
     console.log("In Prod environment,Registering OTEL");
     registerOTel({
-    serviceName: "test-revanth",
+    serviceName: "crm-app",
     });
   }
 
@@ -58,7 +58,7 @@ export async function register() {
     },
     batching:false,
     labels: {
-      app: "revanth-test-app",
+      app: "crm",
       environment: process.env.NODE_ENV,
     },
   });
@@ -67,7 +67,7 @@ export async function register() {
     {
       level: process.env.LOG_LEVEL ?? "info",
       base: {
-        service: "revanth-test-app",
+        service: "crm-app",
       },
     },
     stream
