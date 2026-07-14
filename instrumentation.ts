@@ -56,9 +56,7 @@ export async function register() {
       username: process.env.GRAFANA_LOKI_USERNAME!,
       password: process.env.GRAFANA_LOKI_PASSWORD!,
     },
-    batching: {
-      interval: 5,
-    },
+    batching:false,
     labels: {
       app: "revanth-test-app",
       environment: process.env.NODE_ENV,
