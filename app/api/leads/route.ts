@@ -1,7 +1,10 @@
 import { sql } from "@/lib/db";
 import { NextResponse } from "next/server";
+import {getToken} from "next-auth/jwt";
 
 export async function GET(request: Request) {
+  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
+  if(token){
   const { searchParams } = new URL(request.url);
   const assignedTo = searchParams.get("assignedTo");
   const status = searchParams.get("status");
@@ -67,6 +70,9 @@ export async function GET(request: Request) {
     console.error("Database error:", error);
     return NextResponse.json({ error: "Failed to fetch leads" }, { status: 500 });
   }
+} else {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
 }
 
 export async function POST(request: Request) {
