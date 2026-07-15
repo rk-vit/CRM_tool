@@ -1,16 +1,23 @@
 import { sql } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-
+import { createApiLogger } from "@/lib/logger/api-logger";
 function maskPhone(phone: string): string {
   if (phone.length < 6) return "****";
   return phone.slice(0, -5) + "****" + phone.slice(-1);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const session = await auth();
+  if(!session){
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const log = createApiLogger(request, "/api/unknown-callers");
+  log.start();
   try {
     const session = await auth();
     if (!session?.user?.id) {
+      log.warn(401, { reason: "missing_session" });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -41,7 +48,7 @@ export async function GET() {
       count: mapped.length,
     });
   } catch (error) {
-    console.error("Error fetching unknown callers:", error);
+    log.error(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

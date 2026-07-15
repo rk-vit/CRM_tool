@@ -1,11 +1,18 @@
 import { sql } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { createApiLogger } from "@/lib/logger/api-logger";
+import { auth } from "@/lib/auth";  
 
 export async function POST(
   req: Request,
 ) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const log = createApiLogger(req, "/api/leads/[id]/quickaction");
+  log.start();
   try {
-    console.log("Received quick action request");
     const { id, status, subStatus, comment, followUpDate, createdBy } = await req.json();
 
     await sql`
@@ -73,9 +80,10 @@ export async function POST(
       `;
     }
 
+    log.success(200, { id, status, subStatus, hasComment: !!comment?.trim() });
     return NextResponse.json({ message: "Success" }, { status: 200 });
   } catch (error) {
-    console.error(error);
+    log.error(error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

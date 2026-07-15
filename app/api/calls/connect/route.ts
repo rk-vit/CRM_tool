@@ -1,12 +1,20 @@
 import { sql } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { createApiLogger } from "@/lib/logger/api-logger";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const log = createApiLogger(request, "/api/calls/connect");
+  log.start();
   try {
     // 1. Get the authenticated session (agent's info including phone)
     const session = await auth();
     if (!session?.user?.id) {
+      log.warn(401, { reason: "missing_session" });
       return NextResponse.json(
         { error: "Unauthorized. Please log in." },
         { status: 401 }
@@ -22,6 +30,7 @@ export async function POST(request: Request) {
     const agentPhone = agentResult[0]?.phone;
 
     if (!agentPhone) {
+      log.warn(400, { reason: "missing_agent_phone" });
       return NextResponse.json(
         { error: "Agent phone number not found in profile." },
         { status: 400 }
@@ -33,6 +42,7 @@ export async function POST(request: Request) {
     const { leadId } = body;
 
     if (!leadId) {
+      log.warn(400, { reason: "missing_lead_id" });
       return NextResponse.json(
         { error: "leadId is required." },
         { status: 400 }
@@ -45,6 +55,7 @@ export async function POST(request: Request) {
     `;
 
     if (leadResult.length === 0) {
+      log.warn(404, { reason: "lead_not_found", leadId });
       return NextResponse.json(
         { error: "Lead not found." },
         { status: 404 }
@@ -62,7 +73,9 @@ export async function POST(request: Request) {
     const apiBase = process.env.EXOTEL_API_BASE || "api.exotel.com";
 
     if (!apiKey || !apiToken || !accountSid || !callerId) {
-      console.error("Missing Exotel environment variables");
+      log.error(new Error("Missing Exotel environment variables"), 500, {
+        reason: "missing_exotel_env",
+      });
       return NextResponse.json(
         { error: "Exotel configuration is incomplete. Check server env." },
         { status: 500 }
@@ -106,8 +119,6 @@ export async function POST(request: Request) {
     // HTTP Basic Auth header
     const authHeader = "Basic " + Buffer.from(`${apiKey}:${apiToken}`).toString("base64");
 
-    console.log(`[Exotel] Initiating call: From=${fromNumber}, To=${toNumber}, CallerId=${cleanCallerId}`);
-
     const exotelResponse = await fetch(exotelUrl, {
       method: "POST",
       headers: {
@@ -132,9 +143,12 @@ export async function POST(request: Request) {
         const sidMatch = exotelData.match(/<Sid>(.*?)<\/Sid>/);
         if (sidMatch) callSid = sidMatch[1];
       }
-      console.log(`[Exotel] Call initiated successfully. SID: ${callSid}`);
+      log.success(200, { leadId, callSid, status: callStatus });
     } else {
-      console.error(`[Exotel] API error (${exotelResponse.status}):`, exotelData);
+      log.error(new Error("Exotel API error"), exotelResponse.status, {
+        reason: "exotel_rejected_call",
+        leadId,
+      });
       return NextResponse.json(
         { error: "Failed to initiate call via Exotel.", details: exotelData },
         { status: exotelResponse.status }
@@ -167,7 +181,7 @@ export async function POST(request: Request) {
       message: `Call initiated to ${leadName}`,
     });
   } catch (error) {
-    console.error("[Exotel] Unexpected error:", error);
+    log.error(error);
     return NextResponse.json(
       { error: "Internal server error while initiating call." },
       { status: 500 }

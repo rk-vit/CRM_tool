@@ -1,11 +1,10 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { sql } from "./db";
+import { authConfig } from "./auth.config";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  trustHost: true,
-  session: { strategy: "jwt" },
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -21,8 +20,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!email || !password) return null;
 
         try {
+          const { sql } = await import("./db");
           console.log("Attempting login for:", email);
-          // Fetch user from real DB
           const users = await sql`
             SELECT id, email, name, role, phone, avatar, password, created_at 
             FROM users 
@@ -57,27 +56,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = (user as any).role;
-        token.phone = (user as any).phone;
-        token.avatar = (user as any).avatar;
-        token.createdAt = (user as any).createdAt;
-      }
-      return token;
-    },
-    session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as any;
-        session.user.phone = token.phone as string;
-        session.user.avatar = token.avatar as string;
-        session.user.createdAt = token.createdAt as string;
-      }
-      return session;
-    },
-  },
-  pages: { signIn: "/" },
 });

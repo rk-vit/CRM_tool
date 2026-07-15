@@ -1,9 +1,16 @@
 import { sql } from "@/lib/db";
+import { createApiLogger } from "@/lib/logger/api-logger";
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/email";
 import { auth } from "@/lib/auth";
 
 export async function GET(request: Request) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const log = createApiLogger(request, "/api/emails");
+  log.start();
   const { searchParams } = new URL(request.url);
   const assignedTo = searchParams.get("assignedTo");
 
@@ -39,14 +46,17 @@ export async function GET(request: Request) {
       createdAt: e.created_at
     }));
 
+    log.success(200, { count: mappedEmails.length, assignedTo: assignedTo ?? "all" });
     return NextResponse.json(mappedEmails);
   } catch (error) {
-    console.error("Database error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to fetch emails" }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  const log = createApiLogger(request, "/api/emails");
+  log.start();
   try {
     const session = await auth();
     const userId = session?.user?.id || "system";
@@ -60,7 +70,7 @@ export async function POST(request: Request) {
     try {
       await sendEmail({ to, subject, body });
     } catch (emailError) {
-      console.error("Email sending error:", emailError);
+      log.error(emailError, 500, { reason: "smtp_send_failed" });
       return NextResponse.json({ error: "Failed to send email via SMTP" }, { status: 500 });
     }
 
@@ -96,12 +106,13 @@ export async function POST(request: Request) {
     ];
     await sql.query(timelineQuery, timelineParams);
 
+    log.success(200, { leadId, createdBy: userId });
     return NextResponse.json({
       message: "Email sent successfully",
       emailLog: emailResult[0]
     });
   } catch (error) {
-    console.error("API error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

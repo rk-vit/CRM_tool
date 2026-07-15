@@ -2,8 +2,16 @@ import { sql } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { assign } from "nodemailer/lib/shared";
 import axios from "axios";
+import { createApiLogger } from "@/lib/logger/api-logger";
+import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
+  const session= await auth();
+  if(!session){
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const log = createApiLogger(req, "/api/leads/create");
+  log.start();
   try {
     const { name, email, phone, project, source } = await req.json();
     const lastLeads = await sql.query(`
@@ -15,7 +23,6 @@ export async function POST(req: Request) {
     let nextId;
     let assignedUsers = await sql.query(`SELECT id FROM users`);
     assignedUsers = assignedUsers.map((u: any) => u.id);
-    console.log("Assigned Users:", assignedUsers);
     if (lastLeads.length > 0) {
       const lastNum = parseInt(lastLeads[0].id.replace("AX", ""), 10);
       const nextNum = lastNum + 1;
@@ -87,8 +94,7 @@ export async function POST(req: Request) {
         }
       )
       .then((res) => {
-        console.log("FULL DATA:", JSON.stringify(res.data, null, 2));
-        console.log("MESSAGES:", JSON.stringify(res.data.response.whatsapp.messages, null, 2));
+        log.success(200, { id: nextId, assignedUsersCount: assignedUsers.length, whatsappDelivered: true });
       });
 
     await sql.query(`
@@ -96,9 +102,10 @@ export async function POST(req: Request) {
       VALUES ($1, 'workflow', 'Lead Created', 'Manual entry for walk-in client', 'system', NOW())
     `, [nextId]);
 
+    log.success(200, { id: nextId, assignedUsersCount: assignedUsers.length });
     return NextResponse.json({ success: true, id: nextId });
   } catch (error) {
-    console.error(error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to create lead" }, { status: 500 });
   }
 }

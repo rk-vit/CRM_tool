@@ -1,10 +1,16 @@
 import { sql } from "@/lib/db";
+import { createApiLogger } from "@/lib/logger/api-logger";
 import { NextResponse } from "next/server";
-import {getToken} from "next-auth/jwt";
+import {auth} from "@/lib/auth";
 
 export async function GET(request: Request) {
-  const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
-  if(token){
+  const session = await auth();
+  if(!session){
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const log = createApiLogger(request, "/api/leads");
+  log.start();
+
   const { searchParams } = new URL(request.url);
   const assignedTo = searchParams.get("assignedTo");
   const status = searchParams.get("status");
@@ -65,17 +71,17 @@ export async function GET(request: Request) {
       notes: lead.notes,
     }));
 
+    log.success(200, { count: mappedLeads.length });
     return NextResponse.json(mappedLeads);
   } catch (error) {
-    console.error("Database error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to fetch leads" }, { status: 500 });
   }
-} else {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
 }
 
 export async function POST(request: Request) {
+  const log = createApiLogger(request, "/api/leads");
+  log.start();
   try {
     const body = await request.json();
     const {
@@ -97,9 +103,10 @@ export async function POST(request: Request) {
       ) RETURNING *
     `;
 
+    log.success(200, { leadId: result[0]?.id });
     return NextResponse.json(result[0]);
   } catch (error) {
-    console.error("Database error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to create lead" }, { status: 500 });
   }
 }

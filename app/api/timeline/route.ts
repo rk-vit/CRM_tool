@@ -1,7 +1,16 @@
 import { sql } from "@/lib/db";
+import { createApiLogger } from "@/lib/logger/api-logger";
 import { NextResponse } from "next/server";
+import {auth} from  "@/lib/auth";
 
 export async function GET(request: Request) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const log = createApiLogger(request, "/api/timeline");
+  log.start();
   const { searchParams } = new URL(request.url);
   const leadId = searchParams.get("leadId");
   const limit = searchParams.get("limit") || "10";
@@ -31,9 +40,10 @@ export async function GET(request: Request) {
       metadata: event.metadata
     }));
 
+    log.success(200, { count: mappedEvents.length, leadId: leadId ?? "all" });
     return NextResponse.json(mappedEvents);
   } catch (error) {
-    console.error("Database error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to fetch timeline" }, { status: 500 });
   }
 }

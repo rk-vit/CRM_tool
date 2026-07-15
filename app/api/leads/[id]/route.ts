@@ -1,12 +1,15 @@
 import { sql } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { createApiLogger } from "@/lib/logger/api-logger";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const log = createApiLogger(request, `/api/leads/${id}`);
+  log.start();
 
   try {
     const [leadRes, timelineRes, callsRes, emailsRes, commentsRes] = await Promise.all([
@@ -30,6 +33,7 @@ export async function GET(
     ]);
 
     if (leadRes.length === 0) {
+      log.warn(404, { reason: "lead_not_found", id });
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
 
@@ -57,7 +61,7 @@ export async function GET(
       notes: lead.notes,
     };
 
-    return NextResponse.json({
+    const response = {
       lead: mappedLead,
       timeline: timelineRes.map((e: any) => ({
         id: e.id,
@@ -93,9 +97,17 @@ export async function GET(
         createdByName: c.createdByName,
         createdAt: c.created_at,
       })),
+    };
+    log.success(200, {
+      id,
+      timelineCount: response.timeline.length,
+      callCount: response.calls.length,
+      emailCount: response.emails.length,
+      commentCount: response.comments.length,
     });
+    return NextResponse.json(response);
   } catch (error) {
-    console.error("Database error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to fetch lead details" }, { status: 500 });
   }
 }
@@ -104,12 +116,14 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  const log = createApiLogger(request, `/api/leads/${id}`);
+  log.start();
   const session = await auth();
   if (!session || session.user.role !== "admin") {
+    log.warn(401, { reason: "unauthorized" });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { id } = await params;
   try {
     const body = await request.json();
     const { 
@@ -150,12 +164,14 @@ export async function PATCH(
     `;
 
     if (result.length === 0) {
+      log.warn(404, { reason: "lead_not_found", id });
       return NextResponse.json({ error: "Lead not found" }, { status: 404 });
     }
 
+    log.success(200, { id });
     return NextResponse.json(result[0]);
   } catch (error) {
-    console.error("Database error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Failed to update lead" }, { status: 500 });
   }
 }
