@@ -3,8 +3,13 @@ import { NextResponse } from "next/server";
 import { assign } from "nodemailer/lib/shared";
 import axios from "axios";
 import { createApiLogger } from "@/lib/logger/api-logger";
+import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
+  const session= await auth();
+  if(!session){
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const log = createApiLogger(req, "/api/leads/create");
   log.start();
   try {

@@ -1,10 +1,16 @@
 import { sql } from "@/lib/db";
 import { createApiLogger } from "@/lib/logger/api-logger";
 import { NextResponse } from "next/server";
+import {auth} from "@/lib/auth";
 
 export async function GET(request: Request) {
+  const session = await auth();
+  if(!session){
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const log = createApiLogger(request, "/api/leads");
   log.start();
+
   const { searchParams } = new URL(request.url);
   const assignedTo = searchParams.get("assignedTo");
   const status = searchParams.get("status");
