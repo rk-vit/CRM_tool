@@ -1,10 +1,14 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { createApiLogger } from "@/lib/logger/api-logger";
 
 export async function GET(request: Request) {
+  const log = createApiLogger(request, "/api/calls/recording");
+  log.start();
   try {
     const session = await auth();
     if (!session?.user?.id) {
+      log.warn(401, { reason: "missing_session" });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -12,6 +16,7 @@ export async function GET(request: Request) {
     const recordingUrl = searchParams.get("url");
 
     if (!recordingUrl) {
+      log.warn(400, { reason: "missing_url" });
       return NextResponse.json({ error: "url parameter is required" }, { status: 400 });
     }
 
@@ -20,6 +25,7 @@ export async function GET(request: Request) {
     const apiToken = process.env.EXOTEL_API_TOKEN;
 
     if (!apiKey || !apiToken) {
+      log.error(new Error("Exotel credentials not configured"), 500, { reason: "missing_exotel_credentials" });
       return NextResponse.json({ error: "Exotel credentials not configured" }, { status: 500 });
     }
 
@@ -33,7 +39,7 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-      console.error(`[Recording] Failed to fetch: ${response.status}`);
+      log.warn(response.status, { reason: "recording_fetch_failed", recordingUrl });
       return NextResponse.json({ error: "Failed to fetch recording" }, { status: response.status });
     }
 
@@ -41,6 +47,7 @@ export async function GET(request: Request) {
     const audioData = await response.arrayBuffer();
     const contentType = response.headers.get("content-type") || "audio/mpeg";
 
+    log.success(200, { recordingUrl, contentType });
     return new NextResponse(audioData, {
       status: 200,
       headers: {
@@ -50,7 +57,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error("[Recording] Error:", error);
+    log.error(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -1,18 +1,21 @@
 import { sql } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { createApiLogger } from "@/lib/logger/api-logger";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  const log = createApiLogger(request, `/api/unknown-callers/${id}/discard`);
+  log.start();
   try {
     const session = await auth();
     if (!session?.user?.id) {
+      log.warn(401, { reason: "missing_session", id });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const { id } = await params;
 
     // 1. Get the unknown caller record
     const callerResult = await sql`
@@ -20,6 +23,7 @@ export async function POST(
     `;
 
     if (callerResult.length === 0) {
+      log.warn(404, { reason: "unknown_caller_not_found", id });
       return NextResponse.json(
         { error: "Unknown caller not found or already reviewed." },
         { status: 404 }
@@ -42,12 +46,13 @@ export async function POST(
       ON CONFLICT (phone) DO NOTHING
     `;
 
+    log.success(200, { id, phone: caller.phone });
     return NextResponse.json({
       success: true,
       message: `Number ${caller.phone} has been blocked.`,
     });
   } catch (error) {
-    console.error("Error discarding unknown caller:", error);
+    log.error(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
